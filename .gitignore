@@ -18,6 +18,9 @@ resume.pdf
 WhatsApp Image*
 photo-src/
 
+# local Claude Code settings
+.claude/settings.local.json
+
 # logs and OS files
 *.log
 .DS_Store

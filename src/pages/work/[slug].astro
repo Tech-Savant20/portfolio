@@ -1,0 +1,477 @@
+---
+import Base from "../../layouts/Base.astro";
+import Nav from "../../components/Nav.astro";
+import Footer from "../../components/Footer.astro";
+import Icon from "../../components/Icon.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import ArchDiagram from "../../components/ArchDiagram.astro";
+import HomelabMap2D from "../../components/HomelabMap2D.astro";
+import ProjectVisual from "../../components/ProjectVisual.astro";
+import ConfusionMatrix from "../../components/charts/ConfusionMatrix.astro";
+import ClassF1 from "../../components/charts/ClassF1.astro";
+import { projects, caseStudySlugs, type Project } from "../../data/projects";
+
+export function getStaticPaths() {
+  return caseStudySlugs.map((slug, i) => ({
+    params: { slug },
+    props: {
+      project: projects[slug],
+      next: projects[caseStudySlugs[(i + 1) % caseStudySlugs.length]],
+    },
+  }));
+}
+
+interface Props {
+  project: Project;
+  next: Project;
+}
+
+const { project: p, next } = Astro.props;
+const cs = p.caseStudy!;
+const title = `${p.name}: case study | Abhyuday Tomar`;
+---
+
+<Base title={title} description={p.summary} path={`/work/${p.slug}`} image={`/og/${p.slug}.png`}>
+  <Nav slot="nav" mode="article" />
+
+  <article class="cs">
+    <header class="head container-x">
+      <p class="meta" data-reveal>{`${p.kind}, ${p.period}`}</p>
+      <h1 data-reveal>{p.name}</h1>
+      <p class="lede summary" data-reveal>{p.summary}</p>
+
+      <dl class:list={["facts", { "no-role": !cs.myRole }]} data-reveal>
+        {
+          cs.myRole && (
+            <div>
+              <dt>Role</dt>
+              <dd>{cs.myRole}</dd>
+            </div>
+          )
+        }
+        <div>
+          <dt>Stack</dt>
+          <dd>
+            <ul class="chips">
+              {p.stack.map((s) => (
+                <li class="chip">{s}</li>
+              ))}
+            </ul>
+          </dd>
+        </div>
+        <div>
+          <dt>Links</dt>
+          <dd class="links">
+            {
+              p.links.map((l, i) => (
+                <a class:list={["btn", i === 0 ? "btn-primary" : "btn-ghost"]} href={l.href} target="_blank" rel="noopener">
+                  {l.label}
+                  <Icon name="arrow-up-right" size="1rem" class="nudge" />
+                  <span class="sr-only">(opens in a new tab)</span>
+                </a>
+              ))
+            }
+          </dd>
+        </div>
+      </dl>
+    </header>
+
+    {
+      p.visual === "lastmile" && (
+        <div class="hero-visual container-x" data-reveal>
+          <ProjectVisual visual="lastmile" />
+        </div>
+      )
+    }
+
+    <section class="block container-x" aria-labelledby="problem">
+      <h2 id="problem" class="block-title">The problem</h2>
+      <div class="block-body prose-body">
+        {cs.problem.map((para) => <p>{para}</p>)}
+      </div>
+    </section>
+
+    <section class="block container-x" aria-labelledby="built">
+      <h2 id="built" class="block-title">How it's built</h2>
+      <div class="block-body">
+        <p class="prose-body">{cs.architecture.intro}</p>
+        <div class="wide">
+          {
+            cs.architecture.diagram === "homelab" ? (
+              <figure class="map-figure">
+                <HomelabMap2D standalone />
+                <figcaption>{cs.architecture.caption}</figcaption>
+              </figure>
+            ) : (
+              <ArchDiagram diagram={cs.architecture.diagram} caption={cs.architecture.caption} />
+            )
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="block container-x" aria-labelledby="decisions">
+      <h2 id="decisions" class="block-title">Key decisions</h2>
+      <div class="block-body decisions">
+        {
+          cs.decisions.map((d) => (
+            <div class="decision" data-reveal>
+              <h3>{d.title}</h3>
+              <div class="prose-body">
+                {d.body.map((para) => (
+                  <p>{para}</p>
+                ))}
+              </div>
+              {d.code && <CodeBlock sample={d.code} class="decision-code" />}
+              {d.diagram && (
+                <div class="wide">
+                  <ArchDiagram diagram={d.diagram} caption="Main path and the failure loop. The full transition table also allows a few shortcuts, and admins can override any move." />
+                </div>
+              )}
+            </div>
+          ))
+        }
+      </div>
+    </section>
+
+    <section class="block container-x" aria-labelledby="results">
+      <h2 id="results" class="block-title">Results</h2>
+      <div class="block-body">
+        <dl class="results">
+          {
+            cs.results.metrics.map((m) => (
+              <div data-reveal>
+                <dt>{m.label}</dt>
+                <dd>{m.value}</dd>
+              </div>
+            ))
+          }
+        </dl>
+        {
+          cs.results.attribution && (
+            <p class="attribution" data-reveal>
+              <Icon name="users-three" size="1.25rem" />
+              <span>{cs.results.attribution}</span>
+            </p>
+          )
+        }
+        <div class="prose-body notes">
+          {cs.results.notes.map((n) => <p>{n}</p>)}
+        </div>
+        {
+          cs.results.charts === "retinopathy" && (
+            <div class="charts">
+              <ConfusionMatrix />
+              <ClassF1 />
+            </div>
+          )
+        }
+      </div>
+    </section>
+
+    <section class="block container-x" aria-labelledby="next">
+      <h2 id="next" class="block-title">Limits and next steps</h2>
+      <div class="block-body">
+        <ul class="next-list">
+          {cs.next.map((n) => <li data-reveal>{n}</li>)}
+        </ul>
+      </div>
+    </section>
+
+    <nav class="next-project container-x" aria-label="Next case study">
+      <a href={`/work/${next.slug}`} data-astro-prefetch>
+        <span class="next-label">Next case study</span>
+        <span class="next-name">
+          {next.name}
+          <Icon name="arrow-right" size="0.8em" class="arrow" />
+        </span>
+      </a>
+    </nav>
+  </article>
+
+  <Footer slot="footer" />
+</Base>
+
+<script>
+  import { initReveal } from "../../scripts/reveal";
+  initReveal();
+</script>
+
+<style>
+  .head {
+    display: grid;
+    gap: 1.5rem;
+    padding-top: calc(var(--nav-h) + clamp(3rem, 8vw, 7rem));
+    padding-bottom: clamp(3rem, 6vw, 5rem);
+  }
+
+  h1 {
+    font-size: clamp(3.25rem, 10vw, 9rem);
+    line-height: 0.92;
+    letter-spacing: -0.055em;
+    font-weight: 700;
+  }
+
+  .summary {
+    max-width: 46rem;
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(0, 4fr);
+    gap: 2rem;
+    margin-top: 1.5rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .facts.no-role {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+
+  .facts dt {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    margin-bottom: 0.625rem;
+  }
+
+  .facts dd {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    list-style: none;
+    padding: 0;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+  }
+
+  .hero-visual {
+    padding-bottom: clamp(3rem, 7vw, 6rem);
+  }
+
+  .block {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 9fr);
+    gap: 2rem clamp(2rem, 5vw, 5rem);
+    padding-block: clamp(3rem, 6vw, 5.5rem);
+  }
+
+  /* Divider aligned to the content edges, not the gutters. */
+  .block::before,
+  .next-project::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: var(--gutter);
+    right: var(--gutter);
+    border-top: 1px solid var(--line);
+  }
+
+  .block-title {
+    font-size: clamp(1.5rem, 2.2vw, 2rem);
+    letter-spacing: -0.035em;
+    align-self: start;
+    position: sticky;
+    top: calc(var(--nav-h) + 1.5rem);
+  }
+
+  /* minmax(0, 1fr) keeps long code lines scrolling inside their block
+     instead of stretching the page on phones. */
+  .block-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+    min-width: 0;
+  }
+
+  .prose-body p + p {
+    margin-top: 1rem;
+  }
+
+  .wide {
+    min-width: 0;
+  }
+
+  .map-figure figcaption {
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+
+  .decisions {
+    gap: clamp(3rem, 5vw, 4.5rem);
+  }
+
+  .decision {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .decision h3 {
+    font-size: clamp(1.375rem, 2.2vw, 1.875rem);
+    letter-spacing: -0.03em;
+    max-width: 36rem;
+  }
+
+  .decision :global(.decision-code) {
+    margin-top: 0.5rem;
+    max-width: 52rem;
+  }
+
+  .results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 1.5rem 2rem;
+  }
+
+  .results div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding-top: 1.25rem;
+    border-top: 2px solid var(--fg);
+  }
+
+  .results dd {
+    order: -1;
+    font-size: clamp(2rem, 4vw, 3.25rem);
+    font-weight: 650;
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+
+  .results dt {
+    font-size: 0.9375rem;
+    color: var(--fg-muted);
+    max-width: 22rem;
+  }
+
+  .attribution {
+    display: flex;
+    gap: 0.875rem;
+    align-items: flex-start;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    font-size: 0.9375rem;
+    color: var(--fg-muted);
+    max-width: 52rem;
+  }
+
+  .attribution :global(svg) {
+    flex: none;
+    color: var(--accent-ink);
+    margin-top: 0.125rem;
+  }
+
+  .notes p + p {
+    margin-top: 0.75rem;
+  }
+
+  .charts {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2.5rem;
+    margin-top: 1rem;
+    padding: clamp(1.25rem, 2.5vw, 2rem);
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .next-list {
+    display: grid;
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
+    max-width: 52rem;
+  }
+
+  .next-list li {
+    position: relative;
+    padding-left: 1.75rem;
+    color: var(--fg-muted);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+  }
+
+  .next-list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.7em;
+    width: 0.875rem;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .next-project {
+    position: relative;
+    padding-block: clamp(3rem, 7vw, 6rem);
+  }
+
+  .next-project a {
+    display: inline-grid;
+    gap: 0.5rem;
+  }
+
+  .next-label {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+  }
+
+  .next-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+    font-size: clamp(2.5rem, 7vw, 6rem);
+    font-weight: 650;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    transition: color 0.3s ease;
+  }
+
+  .next-name :global(.arrow) {
+    transition: transform 0.5s var(--ease-out);
+  }
+
+  .next-project a:hover .next-name {
+    color: var(--accent-ink);
+  }
+
+  .next-project a:hover .next-name :global(.arrow) {
+    transform: translateX(0.15em);
+  }
+
+  @media (max-width: 1023px) {
+    .facts {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1.5rem;
+    }
+
+    .block {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .block-title {
+      position: static;
+    }
+
+    .charts {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

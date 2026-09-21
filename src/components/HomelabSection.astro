@@ -1,0 +1,434 @@
+---
+import { servers, flowKinds, type FlowKind } from "../data/homelab";
+import HomelabMap2D from "./HomelabMap2D.astro";
+import Icon from "./Icon.astro";
+
+const kinds = Object.entries(flowKinds) as [FlowKind, (typeof flowKinds)[FlowKind]][];
+const realServers = servers.filter((s) => !s.peer);
+---
+
+<section id="homelab" class="section homelab" aria-labelledby="homelab-title" data-section="homelab" data-homelab>
+  <div class="container-x">
+    <div class="layout">
+      <div class="copy">
+        <h2 id="homelab-title" class="section-title" data-reveal>Jarvis, my homelab</h2>
+        <p class="lede" data-reveal>
+          A laptop at home and two Oracle Cloud VMs on one Tailscale mesh, running 20+ containers for ₹0 a month. Each
+          server is watched from another.
+        </p>
+
+        <div class="status" data-status data-state="loading" aria-live="polite" data-reveal>
+          <p class="status-main">
+            <span class="live-dot" aria-hidden="true"></span>
+            <span data-status-text>Checking live status</span>
+          </p>
+          <p class="status-sub" data-status-sub>
+            <span class="skeleton sk" aria-hidden="true"></span>
+          </p>
+        </div>
+
+        <div class="legend" data-reveal>
+          <p class="legend-title">What travels over the mesh</p>
+          <ul>
+            {
+              kinds.map(([key, k]) => (
+                <li>
+                  <button type="button" class="flow" data-flow={key} aria-pressed="false">
+                    <span class={`glyph g-${key}`} aria-hidden="true" />
+                    <span class="flow-text">
+                      <span class="flow-label">{k.label}</span>
+                      <span class="flow-detail">{k.detail}</span>
+                    </span>
+                  </button>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+
+        <a class="btn btn-ghost case" href="/work/jarvis-homelab" data-astro-prefetch data-reveal>
+          Read the case study
+          <Icon name="arrow-right" size="1.05rem" class="nudge-x" />
+        </a>
+      </div>
+
+      <div class="stage" data-stage>
+        <div class="stage3d" data-stage3d aria-hidden="true">
+          <div class="canvas-wrap" data-canvas-wrap></div>
+        </div>
+        <div class="picker" data-picker hidden>
+          <p class="sr-only" id="picker-label">Show details for a server</p>
+          <div role="group" aria-labelledby="picker-label" class="picker-row">
+            {
+              servers.map((s, i) => (
+                <button type="button" class="pick" data-pick={s.id} aria-pressed={i === 0 ? "true" : "false"}>
+                  {s.name}
+                </button>
+              ))
+            }
+          </div>
+          <div class="detail" data-detail aria-live="polite"></div>
+        </div>
+        <div class="fallback" data-fallback>
+          <HomelabMap2D />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <template data-detail-template>
+    <div class="d-head">
+      <h3 data-d-name></h3>
+      <span data-d-role></span>
+    </div>
+    <p class="d-host" data-d-host></p>
+    <ul class="d-specs" data-d-specs></ul>
+    <ul class="d-services" data-d-services></ul>
+  </template>
+
+  <script is:inline type="application/json" data-homelab-data set:html={JSON.stringify({ servers: realServers.concat(servers.filter((s) => s.peer)) })} />
+</section>
+
+<script>
+  import { initHomelab } from "../scripts/homelab";
+  initHomelab();
+</script>
+
+<style>
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    gap: clamp(2rem, 5vw, 5rem);
+    align-items: start;
+  }
+
+  .copy {
+    display: grid;
+    gap: 1.75rem;
+    justify-items: start;
+    position: sticky;
+    top: calc(var(--nav-h) + 2rem);
+  }
+
+  .status {
+    display: grid;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .status-main {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-weight: 600;
+    font-size: 1.0625rem;
+  }
+
+  .status-sub {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    min-height: 1.2em;
+  }
+
+  .sk {
+    display: inline-block;
+    width: 12rem;
+    height: 0.75rem;
+    border-radius: 2px;
+    vertical-align: middle;
+  }
+
+  .live-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--line-strong);
+    flex: none;
+  }
+
+  .status[data-state="live"] .live-dot {
+    background: var(--accent);
+    box-shadow: 0 0 0 0 var(--accent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .status[data-state="live"] .live-dot {
+      animation: pulse 2.4s var(--ease-out) infinite;
+    }
+  }
+
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 0.6rem transparent;
+    }
+  }
+
+  .status[data-state="degraded"] .live-dot {
+    background: var(--accent);
+  }
+
+  .legend {
+    width: 100%;
+  }
+
+  .legend-title {
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .legend ul {
+    display: grid;
+    gap: 0.25rem;
+    list-style: none;
+    padding: 0;
+  }
+
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    margin-inline: -0.75rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    text-align: left;
+    transition: background-color 0.2s ease;
+  }
+
+  .flow:hover,
+  .flow[aria-pressed="true"] {
+    background: var(--surface);
+  }
+
+  .flow-text {
+    display: grid;
+  }
+
+  .flow-label {
+    font-size: 0.9375rem;
+    font-weight: 550;
+  }
+
+  .flow-detail {
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+  }
+
+  /* One accent, told apart by shape: size and rhythm of the packets. */
+  .glyph {
+    flex: none;
+    width: 2rem;
+    height: 0.75rem;
+    background-repeat: repeat-x;
+    background-position: left center;
+  }
+
+  .g-health {
+    background-image: radial-gradient(circle, var(--accent) 2px, transparent 2.5px);
+    background-size: 8px 100%;
+  }
+
+  .g-backup {
+    background-image: linear-gradient(var(--accent), var(--accent));
+    background-size: 12px 6px;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+
+  .g-metrics {
+    background-image: radial-gradient(circle, var(--accent) 1.5px, transparent 2px);
+    background-size: 5px 100%;
+    opacity: 0.7;
+  }
+
+  .g-sync {
+    background-image: linear-gradient(90deg, var(--accent) 60%, transparent 60%);
+    background-size: 10px 2px;
+    background-position: left center;
+  }
+
+  .stage {
+    position: relative;
+    min-width: 0;
+  }
+
+  .stage3d,
+  .picker {
+    display: none;
+  }
+
+  /* When the 3D scene is running it replaces the 2D map. */
+  .homelab:global(.has-3d) .stage3d {
+    display: block;
+  }
+
+  .homelab:global(.has-3d) .picker {
+    display: grid;
+  }
+
+  .homelab:global(.has-3d) .fallback {
+    display: none;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    height: min(46rem, calc(100dvh - var(--nav-h) - 6rem));
+    border: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse at 50% 40%, var(--accent-wash), transparent 65%),
+      var(--surface);
+    overflow: hidden;
+  }
+
+  .canvas-wrap :global(canvas) {
+    width: 100%;
+    height: 100%;
+    touch-action: pan-y;
+  }
+
+  .canvas-wrap :global(.label3d) {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--fg);
+    padding: 0.25rem 0.5rem;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--bg) 82%, transparent);
+    border: 1px solid var(--line);
+    white-space: nowrap;
+    pointer-events: none;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+
+  .canvas-wrap :global(.label3d.is-active) {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .picker {
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .picker-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .pick {
+    height: 2.25rem;
+    padding-inline: 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .pick:hover {
+    border-color: var(--line-strong);
+  }
+
+  .pick[aria-pressed="true"] {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+  }
+
+  .detail {
+    display: grid;
+    gap: 0.625rem;
+    min-height: 9rem;
+  }
+
+  .detail :global(.d-head) {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .detail :global(h3) {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    letter-spacing: 0;
+  }
+
+  .detail :global(.d-head span),
+  .detail :global(.d-specs) {
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+  }
+
+  .detail :global(.d-specs) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    list-style: none;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+
+  .detail :global(.d-services) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 0.375rem 1.5rem;
+    list-style: none;
+    padding: 0.75rem 0 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .detail :global(.d-services li) {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .detail :global(.d-services .purpose) {
+    color: var(--fg-muted);
+    font-size: 0.8125rem;
+  }
+
+  .detail :global(.d-services .state) {
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 999px;
+    background: var(--line-strong);
+    flex: none;
+    align-self: center;
+  }
+
+  .detail :global(.d-services .state.up) {
+    background: var(--fg);
+  }
+
+  .detail :global(.d-services .state.down) {
+    background: var(--accent);
+  }
+
+  @media (max-width: 1023px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .copy {
+      position: static;
+    }
+  }
+</style>

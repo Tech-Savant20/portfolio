@@ -1,0 +1,256 @@
+---
+import { servers, links } from "../data/homelab";
+
+interface Props {
+  /** On the case study the map is always visible, never swapped for 3D. */
+  standalone?: boolean;
+}
+
+const { standalone = false } = Astro.props;
+---
+
+<div class:list={["map2d", { standalone }]} data-map2d>
+  <svg class="wires" aria-hidden="true" data-wires>
+    {links.map(([a, b]) => <path data-link={`${a}:${b}`} />)}
+  </svg>
+  {
+    servers.map((s) => (
+      <article class:list={["server", `s-${s.id}`, { peer: s.peer }]} data-server={s.id} aria-labelledby={`srv-${s.id}`}>
+        <header>
+          <h3 id={`srv-${s.id}`}>{s.name}</h3>
+          <span class="role">{s.role}</span>
+        </header>
+        <p class="host">{s.host}</p>
+        <ul class="specs">
+          {s.specs.map((spec) => (
+            <li>{spec}</li>
+          ))}
+        </ul>
+        {s.services.length > 0 && (
+          <ul class="services" aria-label={`Services on ${s.name}`}>
+            {s.services.map((svc) => (
+              <li data-service={svc.name.toLowerCase()} title={svc.purpose}>
+                <span class="dot" aria-hidden="true" />
+                <span class="svc-name">{svc.name}</span>
+                {svc.containers && svc.containers > 1 && <span class="x">×{svc.containers}</span>}
+                <span class="sr-only" data-service-state />
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
+    ))
+  }
+</div>
+
+<script>
+  // Draws the Tailscale links between card edges. Pure layout maths, redrawn on resize.
+  const draw = (map: HTMLElement) => {
+    const svg = map.querySelector<SVGSVGElement>("[data-wires]");
+    if (!svg || getComputedStyle(svg).display === "none") return;
+    const box = map.getBoundingClientRect();
+    svg.setAttribute("viewBox", `0 0 ${box.width} ${box.height}`);
+    const rect = (id: string) => map.querySelector<HTMLElement>(`[data-server="${id}"]`)?.getBoundingClientRect();
+    svg.querySelectorAll<SVGPathElement>("path[data-link]").forEach((path) => {
+      const [a, b] = (path.dataset.link ?? "").split(":");
+      const ra = rect(a);
+      const rb = rect(b);
+      if (!ra || !rb) return;
+      const ax = ra.left + ra.width / 2 - box.left;
+      const ay = ra.top + ra.height / 2 - box.top;
+      const bx = rb.left + rb.width / 2 - box.left;
+      const by = rb.top + rb.height / 2 - box.top;
+      // Leave from the side of each card that faces the other one.
+      const horizontal = Math.abs(bx - ax) > Math.abs(by - ay) * 0.6;
+      let d: string;
+      if (horizontal) {
+        const x1 = ax < bx ? ra.right - box.left : ra.left - box.left;
+        const x2 = ax < bx ? rb.left - box.left : rb.right - box.left;
+        const mid = (x1 + x2) / 2;
+        d = `M ${x1} ${ay} C ${mid} ${ay}, ${mid} ${by}, ${x2} ${by}`;
+      } else {
+        const y1 = ay < by ? ra.bottom - box.top : ra.top - box.top;
+        const y2 = ay < by ? rb.top - box.top : rb.bottom - box.top;
+        const mid = (y1 + y2) / 2;
+        d = `M ${ax} ${y1} C ${ax} ${mid}, ${bx} ${mid}, ${bx} ${y2}`;
+      }
+      path.setAttribute("d", d);
+    });
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-map2d]").forEach((map) => {
+    const ro = new ResizeObserver(() => draw(map));
+    ro.observe(map);
+    map.querySelectorAll("[data-server]").forEach((el) => ro.observe(el));
+  });
+</script>
+
+<style>
+  .map2d {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    grid-template-areas:
+      "jarvis oracle"
+      "jarvis vault"
+      "laptop vault";
+    gap: 2.5rem 4rem;
+    align-items: start;
+  }
+
+  .wires {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .wires path {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 6;
+    opacity: 0.8;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .wires path {
+      animation: flow 1.6s linear infinite;
+    }
+  }
+
+  @keyframes flow {
+    to {
+      stroke-dashoffset: -20;
+    }
+  }
+
+  .server {
+    position: relative;
+    display: grid;
+    gap: 0.75rem;
+    padding: 1.25rem 1.375rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+
+  .s-jarvis {
+    grid-area: jarvis;
+  }
+  .s-oracle-1 {
+    grid-area: oracle;
+  }
+  .s-vault-server {
+    grid-area: vault;
+  }
+  .s-laptop {
+    grid-area: laptop;
+    justify-self: start;
+  }
+
+  .peer {
+    background: transparent;
+    border-style: dashed;
+    border-color: var(--line-strong);
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  h3 {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  .role {
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+  }
+
+  .host {
+    font-size: 0.875rem;
+    color: var(--fg);
+  }
+
+  .specs {
+    display: grid;
+    gap: 0.125rem;
+    list-style: none;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+  }
+
+  .services {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    list-style: none;
+    padding: 0.75rem 0 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .services li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 1.75rem;
+    padding-inline: 0.625rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    font-size: 0.75rem;
+  }
+
+  .x {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--fg-muted);
+  }
+
+  /* Status dots only appear once live data says something. */
+  .dot {
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 999px;
+    background: var(--line-strong);
+  }
+
+  .services li:global([data-state="up"]) .dot {
+    background: var(--fg);
+  }
+
+  .services li:global([data-state="down"]) .dot {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-wash);
+  }
+
+  .services li:global([data-state="down"]) {
+    border-color: var(--accent);
+  }
+
+  @media (max-width: 767px) {
+    .map2d {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "jarvis" "vault" "oracle" "laptop";
+      gap: 1rem;
+    }
+
+    .wires {
+      display: none;
+    }
+
+    .s-laptop {
+      justify-self: stretch;
+    }
+  }
+</style>

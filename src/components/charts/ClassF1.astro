@@ -1,0 +1,271 @@
+---
+import { perClass } from "../../data/retinopathy";
+
+const ticks = [0, 0.25, 0.5, 0.75, 1];
+const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+---
+
+<figure class="f1" data-chart>
+  <figcaption class="title">
+    <span>F1 score by stage</span>
+    <span class="sub">The model is strong on the common stages and fails the rare, severe ones.</span>
+  </figcaption>
+
+  <div class="plot" role="img" aria-label="F1 score for each stage. Details in the table below.">
+    <div class="rows" aria-hidden="true">
+      {
+        perClass.map((c) => (
+          <div class="row">
+            <span class="name">
+              {c.name}
+              <span class="n">n = {c.support}</span>
+            </span>
+            <span class="track">
+              {ticks.map((t) => (
+                <span class="grid" style={`--x:${t}`} />
+              ))}
+              <span
+                class="bar"
+                style={`--v:${c.f1}`}
+                data-tip={`${c.name}: F1 ${c.f1.toFixed(2)}, precision ${pct(c.precision)}, recall ${pct(c.recall)}, ${c.support} images`}
+              />
+              <span class="value" style={`--v:${c.f1}`}>
+                {c.f1.toFixed(2)}
+              </span>
+            </span>
+          </div>
+        ))
+      }
+    </div>
+    <div class="axis" aria-hidden="true">
+      <span></span>
+      <span class="ticks">
+        {ticks.map((t) => (
+          <span style={`--x:${t}`}>{t}</span>
+        ))}
+      </span>
+    </div>
+  </div>
+
+  <details class="table-view">
+    <summary>Show the numbers as a table</summary>
+    <table>
+      <caption class="sr-only">Per-stage precision, recall, F1 and number of validation images</caption>
+      <thead>
+        <tr>
+          <th scope="col">Stage</th>
+          <th scope="col">Precision</th>
+          <th scope="col">Recall</th>
+          <th scope="col">F1</th>
+          <th scope="col">Images</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          perClass.map((c) => (
+            <tr>
+              <th scope="row">{c.name}</th>
+              <td>{c.precision.toFixed(2)}</td>
+              <td>{c.recall.toFixed(2)}</td>
+              <td>{c.f1.toFixed(2)}</td>
+              <td>{c.support}</td>
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </details>
+  <div class="tip" role="status" data-tip-box hidden></div>
+</figure>
+
+<script>
+  document.querySelectorAll<HTMLElement>(".f1[data-chart]").forEach((chart) => {
+    const tip = chart.querySelector<HTMLElement>("[data-tip-box]");
+    if (!tip) return;
+    const show = (el: HTMLElement) => {
+      tip.textContent = el.dataset.tip ?? "";
+      tip.hidden = false;
+      const r = el.getBoundingClientRect();
+      const box = chart.getBoundingClientRect();
+      tip.style.left = `${r.right - box.left}px`;
+      tip.style.top = `${r.top - box.top}px`;
+    };
+    const hide = () => (tip.hidden = true);
+    chart.querySelectorAll<HTMLElement>("[data-tip]").forEach((el) => {
+      el.addEventListener("pointerenter", () => show(el));
+      el.addEventListener("focus", () => show(el));
+      el.addEventListener("pointerleave", hide);
+      el.addEventListener("blur", hide);
+    });
+  });
+</script>
+
+<style>
+  .f1 {
+    position: relative;
+    --bar: #e0440c;
+  }
+
+  :global(:root[data-theme="dark"]) .f1 {
+    --bar: #ff5a1f;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .f1 {
+      --bar: #ff5a1f;
+    }
+  }
+
+  .title {
+    display: grid;
+    gap: 0.25rem;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+  }
+
+  .sub {
+    font-weight: 400;
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+
+  .rows {
+    display: grid;
+    gap: 0.875rem;
+  }
+
+  .row,
+  .axis {
+    display: grid;
+    grid-template-columns: 8.5rem 1fr;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .name {
+    display: grid;
+    font-size: 0.875rem;
+    font-weight: 550;
+    line-height: 1.25;
+  }
+
+  .n {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 400;
+    color: var(--fg-muted);
+  }
+
+  .track {
+    position: relative;
+    height: 1.5rem;
+    /* leave room for the value label past the longest bar */
+    margin-right: 3rem;
+  }
+
+  .grid {
+    position: absolute;
+    top: -0.4375rem;
+    bottom: -0.4375rem;
+    left: calc(var(--x) * 100%);
+    width: 1px;
+    background: var(--line);
+  }
+
+  .bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: max(calc(var(--v) * 100%), 2px);
+    background: var(--bar);
+    /* square at the baseline, rounded at the data end */
+    border-radius: 0 4px 4px 0;
+    outline-offset: 2px;
+  }
+
+  .value {
+    position: absolute;
+    top: 50%;
+    left: calc(var(--v) * 100%);
+    transform: translate(0.5rem, -50%);
+    font-size: 0.8125rem;
+    font-weight: 550;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg);
+  }
+
+  .axis {
+    margin-top: 0.75rem;
+  }
+
+  .ticks {
+    position: relative;
+    height: 1rem;
+    margin-right: 3rem;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ticks span {
+    position: absolute;
+    left: calc(var(--x) * 100%);
+    transform: translateX(-50%);
+  }
+
+  .table-view {
+    margin-top: 1.25rem;
+    font-size: 0.875rem;
+  }
+
+  .table-view summary {
+    cursor: pointer;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+
+  .table-view table {
+    margin-top: 0.75rem;
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .table-view th,
+  .table-view td {
+    padding: 0.375rem 0.5rem;
+    text-align: right;
+    border-bottom: 1px solid var(--line);
+    font-weight: 400;
+  }
+
+  .table-view th[scope="row"],
+  .table-view thead th:first-child {
+    text-align: left;
+  }
+
+  .tip {
+    position: absolute;
+    z-index: var(--z-raised);
+    transform: translate(0.5rem, calc(-100% - 0.375rem));
+    max-width: 18rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    pointer-events: none;
+  }
+
+  @media (max-width: 480px) {
+    .row,
+    .axis {
+      grid-template-columns: 6.5rem 1fr;
+      gap: 0.75rem;
+    }
+  }
+</style>

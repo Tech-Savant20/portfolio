@@ -1,0 +1,338 @@
+---
+import { classes, confusion, shortClasses } from "../../data/retinopathy";
+
+interface Props {
+  /** Compact: no axis titles, legend or table. Used as a project-card visual. */
+  compact?: boolean;
+}
+
+const { compact = false } = Astro.props;
+
+// Six bins of "share of the true class", so rare classes read as clearly as common ones.
+const bins = [0, 0.1, 0.25, 0.5, 0.75];
+const binOf = (share: number) => (share === 0 ? 0 : bins.filter((b) => share > b).length);
+const legend = ["0", "under 10%", "10-25%", "25-50%", "50-75%", "75% or more"];
+
+const rows = confusion.map((row, t) => {
+  const total = row.reduce((a, b) => a + b, 0);
+  return row.map((count, p) => {
+    const share = count / total;
+    return {
+      count,
+      share,
+      bin: binOf(share),
+      correct: t === p,
+      label: `True ${classes[t]}, predicted ${classes[p]}: ${count} of ${total} (${Math.round(share * 100)}%)`,
+    };
+  });
+});
+---
+
+<figure class:list={["cm", { compact }]} data-chart>
+  {
+    !compact && (
+      <figcaption class="title">
+        <span>Where the predictions land</span>
+        <span class="sub">Rows are the true stage, columns the prediction. Colour shows the share of each true stage.</span>
+      </figcaption>
+    )
+  }
+
+  <div class="plot" role="img" aria-label="Confusion matrix of the retinopathy classifier on 731 validation images. Details in the table below.">
+    {!compact && <div class="axis-y" aria-hidden="true">True stage</div>}
+    <div class="grid" aria-hidden="true">
+      <span class="corner"></span>
+      {shortClasses.map((c) => <span class="col-label">{c}</span>)}
+      {
+        rows.map((row, t) => (
+          <>
+            <span class="row-label">{classes[t]}</span>
+            {row.map((cell) => (
+              <span class:list={["cell", `b${cell.bin}`, { correct: cell.correct }]} data-tip={compact ? undefined : cell.label}>
+                {cell.count}
+              </span>
+            ))}
+          </>
+        ))
+      }
+    </div>
+    {!compact && <div class="axis-x" aria-hidden="true">Predicted stage</div>}
+  </div>
+
+  {
+    !compact && (
+      <div class="legend" aria-hidden="true">
+        {legend.map((l, i) => (
+          <span class="key">
+            <span class={`swatch b${i}`} />
+            {l}
+          </span>
+        ))}
+      </div>
+    )
+  }
+
+  {
+    !compact && (
+      <details class="table-view">
+        <summary>Show the numbers as a table</summary>
+        <table>
+          <caption class="sr-only">Confusion matrix, counts of validation images</caption>
+          <thead>
+            <tr>
+              <th scope="col">True stage</th>
+              {classes.map((c) => (
+                <th scope="col">Predicted {c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, t) => (
+              <tr>
+                <th scope="row">{classes[t]}</th>
+                {row.map((cell) => (
+                  <td>{cell.count}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+    )
+  }
+  <div class="tip" role="status" data-tip-box hidden></div>
+</figure>
+
+<script>
+  // Tooltip for cells: follows hover and keyboard focus. The table carries the same numbers.
+  document.querySelectorAll<HTMLElement>("[data-chart]").forEach((chart) => {
+    const tip = chart.querySelector<HTMLElement>("[data-tip-box]");
+    if (!tip) return;
+    const show = (cell: HTMLElement) => {
+      tip.textContent = cell.dataset.tip ?? "";
+      tip.hidden = false;
+      const c = cell.getBoundingClientRect();
+      const box = chart.getBoundingClientRect();
+      tip.style.left = `${c.left - box.left + c.width / 2}px`;
+      tip.style.top = `${c.top - box.top}px`;
+    };
+    const hide = () => (tip.hidden = true);
+    chart.querySelectorAll<HTMLElement>(".cell[data-tip]").forEach((cell) => {
+      cell.addEventListener("pointerenter", () => show(cell));
+      cell.addEventListener("focus", () => show(cell));
+      cell.addEventListener("pointerleave", hide);
+      cell.addEventListener("blur", hide);
+    });
+  });
+</script>
+
+<style>
+  .cm {
+    position: relative;
+    --b0: #e3e3de;
+    --b1: #f6ddd0;
+    --b2: #fbbf9f;
+    --b3: #ff9262;
+    --b4: #ec5a1c;
+    --b5: #a93104;
+    --i0: #4e4e53;
+    --i-dark: #121213;
+    --i-light: #f7f4f2;
+  }
+
+  :global(:root[data-theme="dark"]) .cm {
+    --b0: #1d1d20;
+    --b1: #3a1e13;
+    --b2: #692a12;
+    --b3: #9c3710;
+    --b4: #e2531c;
+    --b5: #ff8a57;
+    --i0: #8a8a90;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .cm {
+      --b0: #1d1d20;
+      --b1: #3a1e13;
+      --b2: #692a12;
+      --b3: #9c3710;
+      --b4: #e2531c;
+      --b5: #ff8a57;
+      --i0: #8a8a90;
+    }
+  }
+
+  .title {
+    display: grid;
+    gap: 0.25rem;
+    margin-bottom: 1.25rem;
+    font-weight: 600;
+  }
+
+  .sub {
+    font-weight: 400;
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+
+  .plot {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: 1fr auto;
+    column-gap: 0.75rem;
+  }
+
+  .compact .plot {
+    grid-template-columns: 1fr;
+  }
+
+  .axis-y {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    align-self: center;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+  }
+
+  .axis-x {
+    grid-column: 2;
+    justify-self: center;
+    margin-top: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: auto repeat(5, minmax(0, 1fr));
+    gap: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .col-label,
+  .row-label {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--fg-muted);
+    white-space: nowrap;
+  }
+
+  .col-label {
+    padding-bottom: 0.5rem;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .row-label {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.75rem;
+  }
+
+  .cell {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1.6;
+    min-height: 2.5rem;
+    font-size: 0.9375rem;
+    font-weight: 550;
+    border-radius: 2px;
+    outline-offset: 2px;
+  }
+
+  .compact .cell {
+    aspect-ratio: 1.25;
+    font-size: clamp(0.75rem, 1.1vw, 0.9375rem);
+  }
+
+  .b0 { background: var(--b0); color: var(--i0); }
+  .b1 { background: var(--b1); color: var(--i-dark); }
+  .b2 { background: var(--b2); color: var(--i-dark); }
+  .b3 { background: var(--b3); color: var(--i-dark); }
+  .b4 { background: var(--b4); color: var(--i-dark); }
+  .b5 { background: var(--b5); color: var(--i-light); }
+
+  :global(:root[data-theme="dark"]) .cm :is(.b1, .b2, .b3) { color: #ededea; }
+  :global(:root[data-theme="dark"]) .cm :is(.b4, .b5) { color: #121213; }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .cm :is(.b1, .b2, .b3) { color: #ededea; }
+    :global(:root:not([data-theme="light"])) .cm :is(.b4, .b5) { color: #121213; }
+  }
+
+  /* The diagonal (correct predictions) gets an inner ring in the ink colour. */
+  .correct {
+    box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--fg) 55%, transparent);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin-top: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--fg-muted);
+  }
+
+  .key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .swatch {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 2px;
+  }
+
+  .table-view {
+    margin-top: 1rem;
+    font-size: 0.875rem;
+  }
+
+  .table-view summary {
+    cursor: pointer;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+
+  .table-view table {
+    margin-top: 0.75rem;
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .table-view th,
+  .table-view td {
+    padding: 0.375rem 0.5rem;
+    text-align: right;
+    border-bottom: 1px solid var(--line);
+    font-weight: 400;
+  }
+
+  .table-view th[scope="row"] {
+    text-align: left;
+  }
+
+  .tip {
+    position: absolute;
+    z-index: var(--z-raised);
+    transform: translate(-50%, calc(-100% - 0.5rem));
+    max-width: 16rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    pointer-events: none;
+  }
+</style>

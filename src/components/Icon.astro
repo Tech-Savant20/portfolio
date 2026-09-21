@@ -1,0 +1,33 @@
+---
+// Renders a Phosphor icon (default) or a Simple Icons brand logo as inline SVG
+// at build time. No runtime icon code ships to the browser.
+import { getIconData, iconToSVG } from "@iconify/utils";
+import type { IconifyJSON } from "@iconify/types";
+import phosphor from "@iconify-json/ph/icons.json";
+import simpleIcons from "@iconify-json/simple-icons/icons.json";
+
+interface Props {
+  name: string;
+  set?: "ph" | "brand";
+  size?: string;
+  class?: string;
+  /** Accessible name. Without it the icon is decorative and hidden. */
+  label?: string;
+}
+
+const { name, set = "ph", size = "1em", class: className, label } = Astro.props;
+const collection = (set === "brand" ? simpleIcons : phosphor) as IconifyJSON;
+const data = getIconData(collection, name);
+if (!data) throw new Error(`Unknown icon "${set}:${name}"`);
+const { attributes, body } = iconToSVG(data, { height: size });
+---
+
+<svg
+  {...attributes}
+  class={className}
+  role={label ? "img" : undefined}
+  aria-label={label}
+  aria-hidden={label ? undefined : "true"}
+  focusable="false"
+  set:html={body}
+/>

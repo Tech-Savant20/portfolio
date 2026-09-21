@@ -1,0 +1,83 @@
+---
+import { roleList, type RoleKey } from "../data/site";
+
+interface Props {
+  role: RoleKey;
+}
+
+const { role } = Astro.props;
+const index = roleList.findIndex((r) => r.key === role);
+---
+
+<nav class="switcher" aria-label="Choose what to focus on" data-role-switcher style={`--i:${index}`}>
+  <span class="indicator" aria-hidden="true"></span>
+  {
+    roleList.map((r) => (
+      <a href={r.path} data-role={r.key} aria-current={r.key === role ? "page" : undefined}>
+        {r.label}
+      </a>
+    ))
+  }
+</nav>
+
+<style>
+  .switcher {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 0.25rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: color-mix(in oklab, var(--surface) 70%, transparent);
+    isolation: isolate;
+  }
+
+  .indicator {
+    position: absolute;
+    z-index: -1;
+    top: 0.25rem;
+    bottom: 0.25rem;
+    left: 0.25rem;
+    width: calc((100% - 0.5rem) / 3);
+    border-radius: 999px;
+    background: var(--fg);
+    transform: translateX(calc(var(--i) * 100%));
+    transition: transform 0.6s var(--ease-out);
+  }
+
+  a {
+    display: grid;
+    place-items: center;
+    height: 2.25rem;
+    padding-inline: 1rem;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 550;
+    color: var(--fg-muted);
+    white-space: nowrap;
+    transition:
+      color 0.3s ease,
+      background-color 0s;
+  }
+
+  a:hover {
+    color: var(--fg);
+  }
+
+  /* The active pill has its own background (so its contrast is unambiguous),
+     switched on just as the sliding indicator arrives underneath it. */
+  a[aria-current="page"] {
+    color: var(--bg);
+    background: var(--fg);
+    transition:
+      color 0.3s ease,
+      background-color 0s linear 0.5s;
+  }
+
+  @media (max-width: 400px) {
+    a {
+      padding-inline: 0.625rem;
+      font-size: 0.8125rem;
+    }
+  }
+</style>

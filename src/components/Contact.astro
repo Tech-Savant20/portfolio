@@ -1,0 +1,338 @@
+---
+import { site } from "../data/site";
+import Icon from "./Icon.astro";
+
+// Cloudflare's documented always-pass test key keeps the form usable in dev.
+const TEST_SITEKEY = "1x00000000000000000000AA";
+const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY ?? (import.meta.env.DEV ? TEST_SITEKEY : undefined);
+---
+
+<section id="contact" class="section contact" aria-labelledby="contact-title" data-section="contact">
+  <div class="container-x layout">
+    <div class="intro">
+      <h2 id="contact-title" class="section-title" data-reveal>Hiring a 2027 graduate?</h2>
+      <p class="lede" data-reveal>
+        {`I'm looking for entry-level backend, full-stack and cloud roles. I'm based in Pune and ${site.relocation}.`}
+      </p>
+      <ul class="direct" data-reveal>
+        <li>
+          <a href={`mailto:${site.email}`} class="direct-link">
+            <Icon name="envelope-simple" size="1.25rem" />
+            <span>{site.email}</span>
+          </a>
+          <button type="button" class="copy" data-copy={site.email} aria-label="Copy email address">
+            <Icon name="copy" size="1rem" class="i-copy" />
+            <Icon name="check" size="1rem" class="i-done" />
+          </button>
+        </li>
+        <li>
+          <a href={site.linkedin} class="direct-link" target="_blank" rel="noopener">
+            <Icon name="linkedin-logo" size="1.25rem" />
+            <span>LinkedIn</span>
+            <Icon name="arrow-up-right" size="0.9rem" class="ext" />
+            <span class="sr-only">(opens in a new tab)</span>
+          </a>
+        </li>
+        <li>
+          <a href={site.github} class="direct-link" target="_blank" rel="noopener">
+            <Icon name="github-logo" size="1.25rem" />
+            <span>GitHub</span>
+            <Icon name="arrow-up-right" size="0.9rem" class="ext" />
+            <span class="sr-only">(opens in a new tab)</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="form-wrap" data-reveal>
+      {
+        sitekey ? (
+          <form class="form" data-contact-form novalidate method="post" action="/api/contact">
+            <div class="field">
+              <label for="c-name">Name</label>
+              <input id="c-name" name="name" type="text" autocomplete="name" required maxlength="100" aria-describedby="c-name-err" />
+              <p class="err" id="c-name-err" data-err="name" />
+            </div>
+            <div class="field">
+              <label for="c-email">Email</label>
+              <input id="c-email" name="email" type="email" autocomplete="email" required maxlength="200" aria-describedby="c-email-err" />
+              <p class="err" id="c-email-err" data-err="email" />
+            </div>
+            <div class="field">
+              <label for="c-message">Message</label>
+              <textarea id="c-message" name="message" rows="6" required minlength="10" maxlength="4000" aria-describedby="c-message-help c-message-err" />
+              <p class="help" id="c-message-help">A role, a team or a question. 10 to 4,000 characters.</p>
+              <p class="err" id="c-message-err" data-err="message" />
+            </div>
+            <div class="hp" aria-hidden="true">
+              <label for="c-company">Company</label>
+              <input id="c-company" name="company" type="text" tabindex="-1" autocomplete="off" />
+            </div>
+            <div class="turnstile" data-turnstile data-sitekey={sitekey} />
+            <p class="form-error" role="alert" data-form-error hidden />
+            <button type="submit" class="btn btn-primary submit" data-submit>
+              <span data-submit-label>Send message</span>
+              <Icon name="paper-plane-tilt" size="1.05rem" class="nudge" />
+            </button>
+          </form>
+          <div class="sent" data-sent hidden tabindex="-1">
+            <Icon name="check-circle" size="2rem" class="sent-icon" />
+            <h3>Message sent</h3>
+            <p>Thanks for writing. I usually reply within two days.</p>
+            <button type="button" class="btn btn-ghost" data-again>
+              Send another
+            </button>
+          </div>
+        ) : (
+          <div class="no-form">
+            <h3>Email is quickest</h3>
+            <p>
+              Write to <a href={`mailto:${site.email}`}>{site.email}</a> and I'll reply within two days.
+            </p>
+          </div>
+        )
+      }
+    </div>
+  </div>
+</section>
+
+<script>
+  import { initContact } from "../scripts/contact";
+  initContact();
+</script>
+
+<style>
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+    gap: clamp(2.5rem, 6vw, 6rem);
+    align-items: start;
+  }
+
+  .intro {
+    display: grid;
+    gap: 1.75rem;
+  }
+
+  .direct {
+    display: grid;
+    gap: 0.25rem;
+    list-style: none;
+    padding: 0;
+    margin-top: 0.5rem;
+  }
+
+  .direct li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .direct-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-block: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 550;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 0.3em;
+    transition: text-decoration-color 0.2s ease, color 0.2s ease;
+  }
+
+  .direct-link:hover {
+    color: var(--accent-ink);
+    text-decoration-color: currentColor;
+  }
+
+  .direct-link :global(.ext) {
+    color: var(--fg-subtle);
+  }
+
+  .copy {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--fg-muted);
+  }
+
+  .copy :global(svg) {
+    grid-area: 1 / 1;
+    transition: opacity 0.2s ease, transform 0.3s var(--ease-out);
+  }
+
+  .copy :global(.i-done) {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  .copy:global(.is-done) :global(.i-copy) {
+    opacity: 0;
+  }
+
+  .copy:global(.is-done) :global(.i-done) {
+    opacity: 1;
+    transform: none;
+    color: var(--accent-ink);
+  }
+
+  .form-wrap {
+    padding: clamp(1.5rem, 3vw, 2.5rem);
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+
+  .form {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .field {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 550;
+  }
+
+  input,
+  textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--line-strong);
+    background: var(--bg);
+    color: var(--fg);
+    font: inherit;
+    font-size: 1rem;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 9rem;
+  }
+
+  input:hover,
+  textarea:hover {
+    border-color: var(--fg-subtle);
+  }
+
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+    border-color: var(--accent-ink);
+    box-shadow: 0 0 0 3px var(--accent-wash);
+  }
+
+  [aria-invalid="true"] {
+    border-color: var(--accent-ink);
+  }
+
+  .help {
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+  }
+
+  .err {
+    font-size: 0.8125rem;
+    color: var(--accent-ink);
+    min-height: 0;
+  }
+
+  .err:empty {
+    display: none;
+  }
+
+  .hp {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  /* Interaction-only widget: takes no space unless Cloudflare needs a click. */
+  .turnstile:empty {
+    display: none;
+  }
+
+  .form-error {
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--accent-ink);
+    background: var(--accent-wash);
+    font-size: 0.9375rem;
+  }
+
+  .form-error :global(a) {
+    text-decoration: underline;
+    font-weight: 550;
+  }
+
+  .submit {
+    justify-self: start;
+  }
+
+  .submit[disabled] {
+    opacity: 0.7;
+    cursor: progress;
+  }
+
+  .sent,
+  .no-form {
+    display: grid;
+    gap: 0.75rem;
+    justify-items: start;
+  }
+
+  .sent:not([hidden]) {
+    animation: fade-in 0.6s var(--ease-out) both;
+  }
+
+  .sent :global(.sent-icon) {
+    color: var(--accent-ink);
+  }
+
+  .sent h3,
+  .no-form h3 {
+    font-size: 1.75rem;
+    letter-spacing: -0.035em;
+  }
+
+  .sent p,
+  .no-form p {
+    color: var(--fg-muted);
+  }
+
+  .no-form a {
+    color: var(--fg);
+    text-decoration: underline;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

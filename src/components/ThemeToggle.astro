@@ -1,0 +1,120 @@
+---
+import Icon from "./Icon.astro";
+---
+
+<button type="button" class="toggle" data-theme-toggle aria-label="Switch colour theme">
+  <Icon name="sun" size="1.125rem" class="sun" />
+  <Icon name="moon" size="1.125rem" class="moon" />
+</button>
+
+<script>
+  const button = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
+  const root = document.documentElement;
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  const current = (): "light" | "dark" =>
+    root.dataset.theme === "light" || root.dataset.theme === "dark"
+      ? root.dataset.theme
+      : media.matches
+        ? "dark"
+        : "light";
+
+  const label = () => {
+    const next = current() === "dark" ? "light" : "dark";
+    button?.setAttribute("aria-label", `Switch to ${next} theme`);
+  };
+
+  const apply = (theme: "light" | "dark") => {
+    root.dataset.theme = theme;
+    try {
+      localStorage.setItem("theme", theme);
+    } catch {}
+    label();
+    window.dispatchEvent(new CustomEvent("themechange", { detail: theme }));
+  };
+
+  button?.addEventListener("click", (event) => {
+    const next = current() === "dark" ? "light" : "dark";
+    if (!document.startViewTransition || reduced.matches) {
+      apply(next);
+      return;
+    }
+    // The new theme grows out of the button.
+    const rect = button.getBoundingClientRect();
+    const x = event.clientX || rect.left + rect.width / 2;
+    const y = event.clientY || rect.top + rect.height / 2;
+    const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    root.style.setProperty("--vt-x", `${x}px`);
+    root.style.setProperty("--vt-y", `${y}px`);
+    root.style.setProperty("--vt-r", `${r}px`);
+    document.startViewTransition(() => apply(next));
+  });
+
+  media.addEventListener("change", () => {
+    label();
+    if (!root.dataset.theme) window.dispatchEvent(new CustomEvent("themechange", { detail: current() }));
+  });
+  label();
+</script>
+
+<style>
+  .toggle {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--fg);
+    transition:
+      background-color 0.25s ease,
+      border-color 0.25s ease,
+      transform 0.4s var(--ease-out);
+  }
+
+  .toggle:hover {
+    background: var(--surface);
+    border-color: var(--line-strong);
+  }
+
+  .toggle:active {
+    transform: scale(0.94);
+  }
+
+  .toggle :global(svg) {
+    grid-area: 1 / 1;
+    transition:
+      transform 0.6s var(--ease-out),
+      opacity 0.3s ease;
+  }
+
+  /* Show the icon of the theme you would switch to. */
+  .toggle :global(.sun) {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+  }
+
+  :global(:root[data-theme="dark"]) .toggle :global(.sun) {
+    opacity: 1;
+    transform: none;
+  }
+
+  :global(:root[data-theme="dark"]) .toggle :global(.moon) {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.6);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .toggle :global(.sun) {
+      opacity: 1;
+      transform: none;
+    }
+
+    :global(:root:not([data-theme="light"])) .toggle :global(.moon) {
+      opacity: 0;
+      transform: rotate(90deg) scale(0.6);
+    }
+  }
+</style>

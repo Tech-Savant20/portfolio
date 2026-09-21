@@ -1,0 +1,93 @@
+---
+import { projects, smallBuilds } from "../data/projects";
+import Icon from "./Icon.astro";
+import ProjectVisual from "./ProjectVisual.astro";
+
+const items = smallBuilds.map((slug) => projects[slug]);
+---
+
+<section class="section small" aria-labelledby="small-title" data-section="small">
+  <div class="container-x">
+    <h2 id="small-title" class="title" data-reveal>Smaller builds</h2>
+    <div class="grid">
+      {
+        items.map((p, i) => (
+          <article class="card" data-reveal style={`--reveal-delay:${i * 90}ms`}>
+            <ProjectVisual visual={p.visual} />
+            <div class="body">
+              <p class="meta">{`${p.kind}, ${p.period}`}</p>
+              <h3>{p.name}</h3>
+              <p class="summary">{p.summary}</p>
+              <ul class="stack" aria-label="Built with">
+                {p.stack.map((s) => (
+                  <li class="chip">{s}</li>
+                ))}
+              </ul>
+              {p.links.map((l) => (
+                <a class="link-arrow" href={l.href} target="_blank" rel="noopener">
+                  {l.label}
+                  <Icon name="arrow-up-right" size="0.95rem" />
+                  <span class="sr-only">(opens in a new tab)</span>
+                </a>
+              ))}
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .small {
+    padding-top: 0;
+  }
+
+  .title {
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+    letter-spacing: -0.035em;
+    margin-bottom: 2rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: clamp(1.5rem, 3vw, 2.5rem);
+    align-items: start;
+  }
+
+  .card {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .body {
+    display: grid;
+    gap: 0.875rem;
+    justify-items: start;
+  }
+
+  h3 {
+    font-size: clamp(1.5rem, 2.4vw, 2rem);
+    letter-spacing: -0.035em;
+  }
+
+  .summary {
+    color: var(--fg-muted);
+    max-width: 40rem;
+  }
+
+  .stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+  }
+
+  @media (max-width: 767px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

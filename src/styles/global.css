@@ -1,0 +1,427 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-subtle: var(--fg-subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-on-accent: var(--on-accent);
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+/* ------------------------------------------------------------------ tokens */
+
+:root {
+  color-scheme: light;
+  --bg: #f2f2ef;
+  --surface: #e8e8e4;
+  --surface-2: #dfdfda;
+  --fg: #121213;
+  --fg-muted: #4e4e53;
+  --fg-subtle: #66666c;
+  --line: rgb(18 18 19 / 0.12);
+  --line-strong: rgb(18 18 19 / 0.24);
+  --accent: #ff4f12;
+  --accent-ink: #b83605;
+  --accent-wash: rgb(255 79 18 / 0.09);
+  --on-accent: #121213;
+  --shadow: 0 1px 0 rgb(18 18 19 / 0.04), 0 24px 48px -24px rgb(18 18 19 / 0.18);
+  --grain-opacity: 0.05;
+
+  --nav-h: 4rem;
+  --gutter: clamp(1rem, 4vw, 3rem);
+  --max: 1400px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* z-index scale: content < nav < grain < skip link */
+  --z-raised: 10;
+  --z-nav: 50;
+  --z-grain: 60;
+  --z-skip: 70;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d0d0e;
+    --surface: #161618;
+    --surface-2: #1d1d20;
+    --fg: #ededea;
+    --fg-muted: #a6a6aa;
+    --fg-subtle: #8a8a90;
+    --line: rgb(237 237 234 / 0.1);
+    --line-strong: rgb(237 237 234 / 0.2);
+    --accent: #ff5a1f;
+    --accent-ink: #ff6b35;
+    --accent-wash: rgb(255 90 31 / 0.1);
+    --on-accent: #121213;
+    --shadow: 0 1px 0 rgb(255 255 255 / 0.03), 0 24px 48px -24px rgb(0 0 0 / 0.6);
+    --grain-opacity: 0.07;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d0e;
+  --surface: #161618;
+  --surface-2: #1d1d20;
+  --fg: #ededea;
+  --fg-muted: #a6a6aa;
+  --fg-subtle: #8a8a90;
+  --line: rgb(237 237 234 / 0.1);
+  --line-strong: rgb(237 237 234 / 0.2);
+  --accent: #ff5a1f;
+  --accent-ink: #ff6b35;
+  --accent-wash: rgb(255 90 31 / 0.1);
+  --on-accent: #121213;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.03), 0 24px 48px -24px rgb(0 0 0 / 0.6);
+  --grain-opacity: 0.07;
+}
+
+/* -------------------------------------------------------------------- base */
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-padding-top: calc(var(--nav-h) + 1.5rem);
+    hanging-punctuation: first last;
+  }
+
+  body {
+    min-height: 100dvh;
+    background: var(--bg);
+    overflow-x: clip;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  /* Film grain on a fixed, non-interactive layer so it never repaints on scroll. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-grain);
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-ink);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  img,
+  svg,
+  canvas {
+    display: block;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+}
+
+/* -------------------------------------------------------------- components */
+
+@layer components {
+  .container-x {
+    width: 100%;
+    max-width: var(--max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  .section {
+    padding-block: clamp(5rem, 11vw, 10rem);
+  }
+
+  .section-title {
+    font-size: clamp(2.5rem, 6vw, 5.25rem);
+    line-height: 0.98;
+    letter-spacing: -0.045em;
+    font-weight: 600;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+
+  .meta {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lede {
+    font-size: clamp(1.125rem, 1.6vw, 1.375rem);
+    line-height: 1.5;
+    color: var(--fg-muted);
+    max-width: 38rem;
+  }
+
+  .prose-body {
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    color: var(--fg-muted);
+    max-width: 65ch;
+  }
+
+  .prose-body strong {
+    color: var(--fg);
+    font-weight: 600;
+  }
+
+  /* Interactive controls are full pills; containers and media are square. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    height: 3rem;
+    padding-inline: 1.375rem;
+    border-radius: 999px;
+    font-size: 0.9375rem;
+    font-weight: 550;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    transition:
+      transform 0.5s var(--ease-out),
+      background-color 0.25s ease,
+      border-color 0.25s ease,
+      color 0.25s ease;
+  }
+
+  .btn:active {
+    transform: translateY(1px) scale(0.98);
+  }
+
+  .btn svg {
+    transition: transform 0.5s var(--ease-out);
+  }
+
+  .btn:hover svg.nudge {
+    transform: translate(2px, -2px);
+  }
+
+  .btn:hover svg.nudge-x {
+    transform: translateX(3px);
+  }
+
+  .btn:hover svg.nudge-y {
+    transform: translateY(2px);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .btn-primary:hover {
+    background: color-mix(in oklab, var(--accent) 88%, var(--fg));
+  }
+
+  .btn-ghost {
+    border-color: var(--line-strong);
+    color: var(--fg);
+    background: transparent;
+  }
+
+  .btn-ghost:hover {
+    background: var(--surface);
+    border-color: var(--fg-subtle);
+  }
+
+  .link-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-weight: 550;
+    color: var(--fg);
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 0.3em;
+    text-decoration-thickness: 1px;
+    transition: text-decoration-color 0.2s ease, color 0.2s ease;
+  }
+
+  .link-arrow:hover {
+    color: var(--accent-ink);
+    text-decoration-color: currentColor;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    height: 1.75rem;
+    padding-inline: 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    white-space: nowrap;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+
+  /* Shiki output with a light/dark theme pair and no default colour. */
+  .code-block {
+    position: relative;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .code-block pre {
+    margin: 0;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+    background: transparent !important;
+    tab-size: 2;
+  }
+
+  .code-block .shiki,
+  .code-block .shiki span {
+    color: var(--shiki-light);
+    font-style: var(--shiki-light-font-style);
+    font-weight: var(--shiki-light-font-weight);
+  }
+
+  :root[data-theme="dark"] .code-block .shiki,
+  :root[data-theme="dark"] .code-block .shiki span {
+    color: var(--shiki-dark);
+    font-style: var(--shiki-dark-font-style);
+    font-weight: var(--shiki-dark-font-weight);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .code-block .shiki,
+    :root:not([data-theme="light"]) .code-block .shiki span {
+      color: var(--shiki-dark);
+      font-style: var(--shiki-dark-font-style);
+      font-weight: var(--shiki-dark-font-weight);
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ motion */
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Reveal on scroll. Elements only start hidden once the observer is running,
+   so the page stays readable if scripts fail. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal-ready [data-reveal] {
+    transition:
+      opacity 1s var(--ease-out),
+      transform 1s var(--ease-out);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  .reveal-ready [data-reveal]:not(.is-in) {
+    opacity: 0;
+    transform: translateY(1.75rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Theme switch: the new theme grows out of the toggle as a circle. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  animation: theme-reveal 0.7s var(--ease-in-out);
+}
+
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0 at var(--vt-x, 100%) var(--vt-y, 0%));
+  }
+  to {
+    clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 100%) var(--vt-y, 0%));
+  }
+}

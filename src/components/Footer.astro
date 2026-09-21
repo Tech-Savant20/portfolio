@@ -1,0 +1,52 @@
+---
+import { site } from "../data/site";
+import Icon from "./Icon.astro";
+
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="container-x inner">
+    <p class="name">© {year} {site.name}</p>
+    <p class="built">Built with Astro and Three.js. Runs on Cloudflare Workers.</p>
+    <a class="source" href={site.sourceRepo} target="_blank" rel="noopener">
+      Source on GitHub
+      <Icon name="arrow-up-right" size="0.9rem" />
+      <span class="sr-only">(opens in a new tab)</span>
+    </a>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    border-top: 1px solid var(--line);
+    padding-block: 2rem;
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+
+  .inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 2rem;
+  }
+
+  .name {
+    color: var(--fg);
+    font-weight: 550;
+  }
+
+  .source {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--fg);
+    transition: color 0.2s ease;
+  }
+
+  .source:hover {
+    color: var(--accent-ink);
+  }
+</style>

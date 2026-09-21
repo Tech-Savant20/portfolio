@@ -1,0 +1,52 @@
+---
+import { projects } from "../data/projects";
+import { roles, type RoleKey } from "../data/site";
+import ProjectPanel from "./ProjectPanel.astro";
+
+interface Props {
+  role: RoleKey;
+}
+
+const { role } = Astro.props;
+const ordered = roles[role].projectOrder.map((slug) => projects[slug]);
+---
+
+<section id="work" class="section work" aria-labelledby="work-title" data-section="work">
+  <div class="container-x">
+    <h2 id="work-title" class="section-title head" data-reveal>Selected work</h2>
+    <div class="stack" data-stack>
+      {
+        ordered.map((p, i) => (
+          <div class="slot" style={`--i:${i}`} data-stack-slot data-slug={p.slug}>
+            <ProjectPanel project={p} />
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .head {
+    margin-bottom: clamp(2.5rem, 5vw, 4.5rem);
+  }
+
+  .stack {
+    display: grid;
+    gap: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  /* Desktop with motion allowed: each panel pins under the nav and the next
+     one slides over it. Each slot sits a little lower so the edges stack. */
+  @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+    .stack {
+      gap: 22vh;
+      padding-bottom: 4vh;
+    }
+
+    .slot {
+      position: sticky;
+      top: calc(var(--nav-h) + 1.5rem + var(--i) * 1.25rem);
+    }
+  }
+</style>

@@ -1,0 +1,217 @@
+---
+import { roles, type RoleKey } from "../data/site";
+import Icon from "./Icon.astro";
+import RoleSwitcher from "./RoleSwitcher.astro";
+import ThemeToggle from "./ThemeToggle.astro";
+
+interface Props {
+  /** Home pages show the role switcher; case studies show a way back. */
+  mode: "home" | "article";
+  role?: RoleKey;
+}
+
+const { mode, role = "backend" } = Astro.props;
+const home = roles[role].path;
+const onHome = mode === "home";
+const sectionHref = (id: string) => (onHome ? `#${id}` : `${home}#${id}`);
+---
+
+<div class="sentinel" data-nav-sentinel aria-hidden="true"></div>
+<header class="nav" data-nav>
+  <div class="inner container-x">
+    <a href={home} class="brand" data-home-link>
+      <span class="mark" aria-hidden="true">AT</span>
+      <span class="name">Abhyuday Tomar</span>
+    </a>
+
+    <div class="center">
+      {
+        onHome ? (
+          <RoleSwitcher role={role} />
+        ) : (
+          <a href={`${home}#work`} class="back" data-back-link>
+            <Icon name="arrow-left" size="1rem" />
+            All work
+          </a>
+        )
+      }
+    </div>
+
+    <div class="end">
+      <nav aria-label="Sections" class="links">
+        <a href={sectionHref("work")} data-section-link>Work</a>
+        <a href={sectionHref("homelab")} data-section-link>Homelab</a>
+        <a href={sectionHref("contact")} data-section-link>Contact</a>
+      </nav>
+      <ThemeToggle />
+    </div>
+  </div>
+</header>
+
+<script>
+  // Solid background once the page has scrolled past the top.
+  const nav = document.querySelector<HTMLElement>("[data-nav]");
+  const sentinel = document.querySelector("[data-nav-sentinel]");
+  if (nav && sentinel) {
+    new IntersectionObserver(([entry]) => {
+      nav.classList.toggle("is-scrolled", !entry.isIntersecting);
+    }).observe(sentinel);
+  }
+
+  // On case studies, "All work" returns to the view the visitor came from.
+  const back = document.querySelector<HTMLAnchorElement>("[data-back-link]");
+  if (back) {
+    try {
+      const path = sessionStorage.getItem("rolePath");
+      if (path && ["/", "/cloud", "/ai"].includes(path)) {
+        back.href = `${path}#work`;
+        document.querySelector<HTMLAnchorElement>("[data-home-link]")?.setAttribute("href", path);
+        document.querySelectorAll<HTMLAnchorElement>("[data-section-link]").forEach((link) => {
+          link.href = `${path}${link.hash}`;
+        });
+      }
+    } catch {}
+  }
+</script>
+
+<style>
+  .sentinel {
+    position: absolute;
+    top: 0;
+    height: 1px;
+    width: 1px;
+  }
+
+  .nav {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: var(--z-nav);
+    height: var(--nav-h);
+    border-bottom: 1px solid transparent;
+    transition:
+      background-color 0.4s ease,
+      border-color 0.4s ease,
+      backdrop-filter 0.4s ease;
+  }
+
+  /* Only the standard property: the minifier adds the -webkit- prefix for
+     Safari, and writing both made it drop the one Chrome reads. */
+  .nav:global(.is-scrolled) {
+    background: color-mix(in oklab, var(--bg) 86%, transparent);
+    border-bottom-color: var(--line);
+    backdrop-filter: blur(16px) saturate(140%);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .nav:global(.is-scrolled) {
+      background: var(--bg);
+      backdrop-filter: none;
+    }
+  }
+
+  .inner {
+    height: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    justify-self: start;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .mark {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: var(--fg);
+    color: var(--bg);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .name {
+    font-size: 0.9375rem;
+  }
+
+  .center {
+    display: flex;
+    justify-content: center;
+  }
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.5rem;
+    padding-inline: 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-size: 0.875rem;
+    font-weight: 550;
+    transition:
+      background-color 0.25s ease,
+      border-color 0.25s ease;
+  }
+
+  .back:hover {
+    background: var(--surface);
+    border-color: var(--line-strong);
+  }
+
+  .end {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .links {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--fg-muted);
+  }
+
+  .links a {
+    transition: color 0.2s ease;
+  }
+
+  .links a:hover {
+    color: var(--fg);
+  }
+
+  @media (max-width: 1023px) {
+    .links {
+      display: none;
+    }
+  }
+
+  @media (max-width: 767px) {
+    /* Hidden visually but kept as the link's accessible name. */
+    .name {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
+    .inner {
+      grid-template-columns: auto 1fr auto;
+      gap: 0.5rem;
+    }
+  }
+</style>

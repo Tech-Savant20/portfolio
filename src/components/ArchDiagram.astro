@@ -1,0 +1,295 @@
+---
+import type { Diagram, DiagramNode, Side } from "../data/diagrams";
+
+interface Props {
+  diagram: Diagram;
+  caption?: string;
+}
+
+const { diagram, caption } = Astro.props;
+
+// ---- geometry ------------------------------------------------------------------
+const PAD = 12;
+const H_GAP = 64;
+const V_GAP = 76;
+const LINE = 20;
+const W = diagram.nodeWidth;
+
+const nodeHeight = (n: DiagramNode) =>
+  22 + LINE + (n.sub ? 18 : 0) + (n.items?.length ? 12 + n.items.length * LINE : 0) + 16;
+
+const rows = Math.max(...diagram.nodes.map((n) => n.row)) + 1;
+const rowH = Array.from({ length: rows }, (_, r) =>
+  Math.max(0, ...diagram.nodes.filter((n) => n.row === r).map(nodeHeight)),
+);
+const rowY = rowH.map((_, r) => PAD + rowH.slice(0, r).reduce((a, b) => a + b + V_GAP, 0));
+const maxCol = Math.max(...diagram.nodes.map((n) => n.col));
+const width = PAD * 2 + (maxCol + 1) * W + maxCol * H_GAP;
+const height = rowY[rows - 1] + rowH[rows - 1] + PAD;
+
+const boxes = new Map(
+  diagram.nodes.map((n) => {
+    const h = nodeHeight(n);
+    const x = PAD + n.col * (W + H_GAP);
+    const y = rowY[n.row] + (rowH[n.row] - h) / 2;
+    return [n.id, { n, x, y, w: W, h }];
+  }),
+);
+
+type Pt = [number, number];
+const anchor = (id: string, side: Side, offset = 0): Pt => {
+  const b = boxes.get(id)!;
+  switch (side) {
+    case "top":
+      return [b.x + b.w / 2 + offset, b.y];
+    case "bottom":
+      return [b.x + b.w / 2 + offset, b.y + b.h];
+    case "left":
+      return [b.x, b.y + b.h / 2 + offset];
+    default:
+      return [b.x + b.w, b.y + b.h / 2 + offset];
+  }
+};
+
+const autoSides = (from: string, to: string): [Side, Side] => {
+  const a = boxes.get(from)!;
+  const b = boxes.get(to)!;
+  if (a.n.row === b.n.row) return a.n.col < b.n.col ? ["right", "left"] : ["left", "right"];
+  if (a.n.col === b.n.col) return a.n.row < b.n.row ? ["bottom", "top"] : ["top", "bottom"];
+  return a.n.col < b.n.col ? ["right", "left"] : ["left", "right"];
+};
+
+const horizontal = (s: Side) => s === "left" || s === "right";
+
+// Orthogonal route with rounded corners.
+const route = (p: Pt, q: Pt, fs: Side, ts: Side): { d: string; mid: Pt } => {
+  let pts: Pt[];
+  if (horizontal(fs) && horizontal(ts)) {
+    const mx = (p[0] + q[0]) / 2;
+    pts = [p, [mx, p[1]], [mx, q[1]], q];
+  } else if (!horizontal(fs) && !horizontal(ts)) {
+    const my = (p[1] + q[1]) / 2;
+    pts = [p, [p[0], my], [q[0], my], q];
+  } else if (horizontal(fs)) {
+    pts = [p, [q[0], p[1]], q];
+  } else {
+    pts = [p, [p[0], q[1]], q];
+  }
+  // Drop zero-length segments.
+  pts = pts.filter((pt, i) => i === 0 || pt[0] !== pts[i - 1][0] || pt[1] !== pts[i - 1][1]);
+  const r = 10;
+  let d = `M ${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [px, py] = pts[i - 1];
+    const [cx, cy] = pts[i];
+    const [nx, ny] = pts[i + 1];
+    const len1 = Math.hypot(cx - px, cy - py);
+    const len2 = Math.hypot(nx - cx, ny - cy);
+    const rr = Math.min(r, len1 / 2, len2 / 2);
+    const ax = cx - ((cx - px) / (len1 || 1)) * rr;
+    const ay = cy - ((cy - py) / (len1 || 1)) * rr;
+    const bx = cx + ((nx - cx) / (len2 || 1)) * rr;
+    const by = cy + ((ny - cy) / (len2 || 1)) * rr;
+    d += ` L ${ax} ${ay} Q ${cx} ${cy} ${bx} ${by}`;
+  }
+  const last = pts[pts.length - 1];
+  d += ` L ${last[0]} ${last[1]}`;
+  // Label goes on the longest segment.
+  let best = 0;
+  let mid: Pt = [(pts[0][0] + last[0]) / 2, (pts[0][1] + last[1]) / 2];
+  for (let i = 1; i < pts.length; i++) {
+    const len = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    if (len > best) {
+      best = len;
+      mid = [(pts[i][0] + pts[i - 1][0]) / 2, (pts[i][1] + pts[i - 1][1]) / 2];
+    }
+  }
+  return { d, mid };
+};
+
+const edges = diagram.edges.map((e, i) => {
+  const [fs0, ts0] = autoSides(e.from, e.to);
+  const fs = e.fromSide ?? fs0;
+  const ts = e.toSide ?? ts0;
+  const p = anchor(e.from, fs, e.fromOffset);
+  const q = anchor(e.to, ts, e.toOffset);
+  const { d, mid } = route(p, q, fs, ts);
+  const labelW = e.label ? e.label.length * 6.6 + 14 : 0;
+  return { ...e, d, mid, labelW, key: `${diagram.id}-e${i}` };
+});
+
+const markerId = `${diagram.id}-arrow`;
+const nodes = [...boxes.values()];
+const minWidth = Math.round(Math.min(width, 960) * 0.8);
+---
+
+<figure class="diagram" data-reveal>
+  <div class="scroller" style={`--min:${minWidth}px`}>
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-labelledby={`${diagram.id}-title ${diagram.id}-desc`}
+      class:list={{ mono: diagram.monoLabels }}
+    >
+      <title id={`${diagram.id}-title`}>{diagram.title}</title>
+      <desc id={`${diagram.id}-desc`}>
+        {
+          diagram.edges
+            .map((e) => `${boxes.get(e.from)!.n.label} to ${boxes.get(e.to)!.n.label}${e.label ? ` (${e.label})` : ""}`)
+            .join(". ")
+        }
+      </desc>
+      <defs>
+        <marker id={markerId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" class="arrowhead" />
+        </marker>
+      </defs>
+
+      {
+        edges.map((e) => (
+          <path
+            d={e.d}
+            class:list={["edge", { dashed: e.dashed }]}
+            marker-end={`url(#${markerId})`}
+            marker-start={e.both ? `url(#${markerId})` : undefined}
+          />
+        ))
+      }
+
+      {
+        nodes.map(({ n, x, y, w, h }) => (
+          <g class:list={["node", n.tone ?? "default"]}>
+            <rect x={x} y={y} width={w} height={h} />
+            <text x={x + 16} y={y + 22 + 14} class="label">
+              {n.label}
+            </text>
+            {n.sub && (
+              <text x={x + 16} y={y + 22 + LINE + 14} class="sub">
+                {n.sub}
+              </text>
+            )}
+            {n.items?.map((item, i) => (
+              <text x={x + 16} y={y + 22 + LINE + (n.sub ? 18 : 0) + 12 + i * LINE + 14} class="item">
+                {item}
+              </text>
+            ))}
+          </g>
+        ))
+      }
+
+      {
+        edges
+          .filter((e) => e.label)
+          .map((e) => (
+            <g class="edge-label">
+              <rect x={e.mid[0] - e.labelW / 2} y={e.mid[1] - 10} width={e.labelW} height={20} rx="10" />
+              <text x={e.mid[0]} y={e.mid[1] + 4} text-anchor="middle">
+                {e.label}
+              </text>
+            </g>
+          ))
+      }
+    </svg>
+  </div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<style>
+  .diagram {
+    margin: 0;
+  }
+
+  .scroller {
+    overflow-x: auto;
+    padding: 1.5rem;
+    border: 1px solid var(--line);
+    background:
+      radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 1.5px) 0 0 / 20px 20px,
+      var(--surface);
+    /* On narrow screens the figure scrolls sideways instead of shrinking the text. */
+    mask-image: linear-gradient(90deg, #000 calc(100% - 2rem), transparent);
+  }
+
+  @media (min-width: 1024px) {
+    .scroller {
+      mask-image: none;
+    }
+  }
+
+  svg {
+    width: 100%;
+    min-width: var(--min);
+    height: auto;
+    overflow: visible;
+    font-family: var(--font-sans);
+  }
+
+  .node rect {
+    fill: var(--bg);
+    stroke: var(--line-strong);
+    stroke-width: 1;
+  }
+
+  .node.focus rect {
+    stroke: var(--accent);
+    stroke-width: 1.5;
+  }
+
+  .node.muted rect {
+    fill: transparent;
+    stroke-dasharray: 4 4;
+  }
+
+  .label {
+    fill: var(--fg);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .mono .label {
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+  }
+
+  .sub {
+    fill: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .item {
+    fill: var(--fg-muted);
+    font-size: 14px;
+  }
+
+  .edge {
+    fill: none;
+    stroke: var(--fg-subtle);
+    stroke-width: 1.25;
+  }
+
+  .edge.dashed {
+    stroke-dasharray: 4 5;
+  }
+
+  .arrowhead {
+    fill: var(--fg-subtle);
+  }
+
+  .edge-label rect {
+    fill: var(--surface);
+    stroke: var(--line);
+  }
+
+  .edge-label text {
+    fill: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  figcaption {
+    margin-top: 0.75rem;
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+</style>

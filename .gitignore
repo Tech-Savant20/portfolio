@@ -1,0 +1,24 @@
+# build output
+dist/
+.astro/
+.wrangler/
+
+# dependencies
+node_modules/
+
+# secrets and local config
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+
+# private source material: never commit
+career.md
+resume.pdf
+WhatsApp Image*
+photo-src/
+
+# logs and OS files
+*.log
+.DS_Store
+Thumbs.db

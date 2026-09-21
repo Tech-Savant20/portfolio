@@ -1,0 +1,161 @@
+---
+import { skillGroups, courseworkOnly } from "../data/skills";
+import { roles, type RoleKey } from "../data/site";
+import Icon from "./Icon.astro";
+
+interface Props {
+  role: RoleKey;
+}
+
+const { role } = Astro.props;
+const ordered = roles[role].skillOrder.map((k) => skillGroups[k as keyof typeof skillGroups]);
+---
+
+<section id="skills" class="section skills" aria-labelledby="skills-title" data-section="skills">
+  <div class="container-x">
+    <h2 id="skills-title" class="section-title head" data-reveal>What I work with</h2>
+    <div class="bento" data-skills>
+      {
+        ordered.map((g) => (
+          <article class={`cell c-${g.key}`} data-skill-group={g.key} aria-labelledby={`sk-${g.key}`}>
+            <div class="cell-head">
+              <h3 id={`sk-${g.key}`}>{g.title}</h3>
+              <p>{g.blurb}</p>
+            </div>
+            <ul class="tools">
+              {g.skills.map((s) => (
+                <li>
+                  {s.icon ? <Icon name={s.icon} set="brand" size="1.125rem" /> : <Icon name="text-aa" size="1.125rem" />}
+                  <span>{s.name}</span>
+                </li>
+              ))}
+            </ul>
+          </article>
+        ))
+      }
+    </div>
+    <p class="coursework" data-reveal>{courseworkOnly}</p>
+  </div>
+</section>
+
+<style>
+  .head {
+    margin-bottom: clamp(2.5rem, 5vw, 4rem);
+  }
+
+  /* Three cells, whichever group comes first is featured. */
+  .bento {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-rows: auto auto;
+    gap: 1rem;
+  }
+
+  .cell {
+    display: flex;
+    flex-direction: column;
+    gap: 1.75rem;
+    padding: clamp(1.5rem, 2.5vw, 2.25rem);
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .cell:first-child {
+    grid-row: span 2;
+    background:
+      radial-gradient(120% 80% at 100% 0%, var(--accent-wash), transparent 60%),
+      var(--surface);
+  }
+
+  .cell:nth-child(2) {
+    background:
+      radial-gradient(circle at 1px 1px, var(--line-strong) 1px, transparent 1.5px) 0 0 / 18px 18px,
+      var(--surface);
+  }
+
+  .cell:nth-child(3) {
+    background: transparent;
+  }
+
+  h3 {
+    font-size: clamp(1.5rem, 2.2vw, 2rem);
+    letter-spacing: -0.035em;
+  }
+
+  .cell:first-child h3 {
+    font-size: clamp(2rem, 3.4vw, 3.25rem);
+  }
+
+  .cell-head p {
+    margin-top: 0.5rem;
+    color: var(--fg-muted);
+    max-width: 32rem;
+  }
+
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    list-style: none;
+    padding: 0;
+    margin-top: auto;
+  }
+
+  .tools li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.375rem;
+    padding-inline: 0.875rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .tools li :global(svg) {
+    color: var(--fg-muted);
+  }
+
+  /* The featured group shows its tools as tiles with larger logos. */
+  .cell:first-child .tools {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8.25rem, 1fr));
+    gap: 0.5rem;
+  }
+
+  .cell:first-child .tools li {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.25rem;
+    height: auto;
+    min-height: 6.25rem;
+    padding: 1rem;
+    border-radius: 0;
+    font-size: 0.9375rem;
+  }
+
+  .cell:first-child .tools li :global(svg) {
+    width: 1.75rem;
+    height: 1.75rem;
+    color: var(--fg);
+  }
+
+  .coursework {
+    margin-top: 1.25rem;
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+
+  @media (max-width: 767px) {
+    .bento {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cell:first-child {
+      grid-row: auto;
+    }
+  }
+</style>

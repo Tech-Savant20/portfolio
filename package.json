@@ -1,0 +1,46 @@
+{
+  "name": "abhyudaytomar-portfolio",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && node scripts/postbuild.mjs",
+    "preview": "npm run build && wrangler dev",
+    "check": "astro check && tsc -p worker/tsconfig.json --noEmit",
+    "deploy": "npm run build && wrangler deploy",
+    "photo": "node scripts/process-photo.mjs",
+    "astro": "astro"
+  },
+  "allowScripts": {
+    "esbuild": true,
+    "sharp": true,
+    "workerd": true
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.4",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
+    "@iconify-json/ph": "^1.2.2",
+    "@iconify-json/simple-icons": "^1.2.97",
+    "@iconify/utils": "^3.1.7",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.3.3",
+    "gsap": "^3.15.0",
+    "tailwindcss": "^4.3.3",
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@cloudflare/workers-types": "^5.20260921.1",
+    "@iconify/types": "^2.0.0",
+    "@types/three": "^0.186.0",
+    "puppeteer-core": "^25.11.0",
+    "sharp": "^0.35.4",
+    "typescript": "^6.0.3",
+    "wrangler": "^4.136.1"
+  }
+}

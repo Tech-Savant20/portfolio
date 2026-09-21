@@ -1,0 +1,184 @@
+---
+import { Image } from "astro:assets";
+import lastmileAdmin from "../assets/lastmile-admin.png";
+import lastmileTracking from "../assets/lastmile-tracking.png";
+import financeDashboard from "../assets/finance-dashboard.png";
+import CodeBlock from "./CodeBlock.astro";
+import ConfusionMatrix from "./charts/ConfusionMatrix.astro";
+import Icon from "./Icon.astro";
+import { projects, type VisualKey } from "../data/projects";
+
+interface Props {
+  visual: VisualKey;
+}
+
+const { visual } = Astro.props;
+const rulesSample = projects.docpilot.caseStudy!.decisions[0].code!;
+---
+
+{
+  visual === "lastmile" && (
+    <div class="v-lastmile">
+      <Image
+        src={lastmileAdmin}
+        alt="LastMile IQ admin console: order totals, revenue and the shipment feed"
+        widths={[640, 960, 1280]}
+        sizes="(min-width: 1024px) 50vw, 92vw"
+        class="shot main"
+      />
+      <Image
+        src={lastmileTracking}
+        alt="Public tracking page for an order, with its status timeline"
+        widths={[480, 720]}
+        sizes="(min-width: 1024px) 28vw, 60vw"
+        class="shot overlay"
+      />
+    </div>
+  )
+}
+
+{
+  visual === "docpilot" && (
+    <div class="v-code">
+      <CodeBlock sample={rulesSample} bare class="code" />
+    </div>
+  )
+}
+
+{
+  visual === "retinopathy" && (
+    <div class="v-matrix">
+      <ConfusionMatrix compact />
+      <p class="matrix-note">Validation predictions by true stage (rows). The rare severe stages collapse into Moderate.</p>
+    </div>
+  )
+}
+
+{
+  visual === "finance" && (
+    <Image
+      src={financeDashboard}
+      alt="Finance Tracker expense dashboard listing items read from two receipts"
+      widths={[480, 720, 960]}
+      sizes="(min-width: 768px) 45vw, 92vw"
+      class="shot finance"
+    />
+  )
+}
+
+{
+  visual === "scrapeverse" && (
+    <ol class="v-flow" aria-label="Pipeline">
+      <li>
+        <span class="step">Bright Data</span>
+        <span class="what">scrapes blog posts</span>
+      </li>
+      <li aria-hidden="true" class="arrow">
+        <Icon name="arrow-right" />
+      </li>
+      <li>
+        <span class="step">Node.js</span>
+        <span class="what">collects the JSON</span>
+      </li>
+      <li aria-hidden="true" class="arrow">
+        <Icon name="arrow-right" />
+      </li>
+      <li>
+        <span class="step">Gemini</span>
+        <span class="what">drafts the post</span>
+      </li>
+    </ol>
+  )
+}
+
+<style>
+  .shot {
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+
+  .v-lastmile {
+    position: relative;
+    padding-bottom: 14%;
+  }
+
+  .v-lastmile :global(.main) {
+    box-shadow: var(--shadow);
+  }
+
+  .v-lastmile :global(.overlay) {
+    position: absolute;
+    width: 52%;
+    left: -6%;
+    bottom: 0;
+    box-shadow: var(--shadow);
+  }
+
+  .v-code {
+    position: relative;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .v-code :global(.code-block) {
+    font-size: clamp(0.75rem, 1vw, 0.875rem);
+    box-shadow: var(--shadow);
+  }
+
+  .v-matrix {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .matrix-note {
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+    max-width: 44ch;
+  }
+
+  .v-flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem 1.5rem;
+    list-style: none;
+    background:
+      radial-gradient(circle at 1px 1px, var(--line-strong) 1px, transparent 1.5px) 0 0 / 16px 16px,
+      var(--surface);
+    border: 1px solid var(--line);
+  }
+
+  .v-flow li:not(.arrow) {
+    display: grid;
+    gap: 0.125rem;
+    min-width: 14rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 999px;
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+    text-align: center;
+  }
+
+  .v-flow .arrow {
+    transform: rotate(90deg);
+  }
+
+  .step {
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+
+  .what {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--fg-muted);
+  }
+
+  .arrow {
+    color: var(--fg-subtle);
+  }
+</style>

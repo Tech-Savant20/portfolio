@@ -1,0 +1,29 @@
+---
+import { Code } from "astro:components";
+import { codeThemes } from "../lib/shiki-themes";
+import type { CodeSample } from "../data/projects";
+
+interface Props {
+  sample: CodeSample;
+  class?: string;
+  /** Hide the caption, e.g. when the block is used as a visual. */
+  bare?: boolean;
+}
+
+const { sample, class: className, bare = false } = Astro.props;
+---
+
+<figure class:list={["code-block", className]}>
+  <Code code={sample.source} lang={sample.lang as any} themes={codeThemes} defaultColor={false} />
+  {!bare && <figcaption>{sample.caption}</figcaption>}
+</figure>
+
+<style>
+  figcaption {
+    padding: 0.75rem 1.5rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-subtle);
+  }
+</style>

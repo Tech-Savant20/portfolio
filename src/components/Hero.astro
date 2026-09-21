@@ -1,0 +1,266 @@
+---
+import { Image } from "astro:assets";
+import portrait from "../assets/portrait.png";
+import { roles, site, type RoleKey } from "../data/site";
+import Icon from "./Icon.astro";
+
+interface Props {
+  role: RoleKey;
+  resume: string | null;
+}
+
+const { role, resume } = Astro.props;
+const r = roles[role];
+const chars = [..."Abhyuday"].map((c) => ({ c, space: false })).concat(
+  [{ c: " ", space: true }],
+  [..."Tomar"].map((c) => ({ c, space: false })),
+);
+---
+
+<section class="hero" aria-labelledby="hero-name" data-hero>
+  <div class="inner container-x">
+    <p class="eyebrow top">{site.eyebrow}</p>
+
+    <h1 class="name" id="hero-name" data-hero-name>
+      <span class="sr-only">Abhyuday Tomar</span>
+      <span class="mask" aria-hidden="true">
+        {
+          chars.map(({ c, space }, i) =>
+            space ? <span class="gap"> </span> : <span class="char" style={`--i:${i}`}>{c}</span>,
+          )
+        }
+      </span>
+    </h1>
+
+    <div class="portrait">
+      <Image
+        src={portrait}
+        alt="Abhyuday Tomar"
+        widths={[420, 640, 860, 1034]}
+        sizes="(min-width: 768px) 52vw, 92vw"
+        priority
+      />
+    </div>
+
+    <div class="foot">
+      <p class="line" data-hero-line aria-live="polite">
+        <strong data-hero-title>{r.heroTitle}</strong>
+        {" "}
+        <span data-hero-body>{r.heroBody}</span>
+      </p>
+      <div class="ctas">
+        {
+          resume && (
+            <a class="btn btn-primary" href={resume} target="_blank" rel="noopener" data-resume-link>
+              Resume
+              <Icon name="arrow-up-right" size="1.05rem" class="nudge" />
+              <span class="sr-only">(opens in a new tab)</span>
+            </a>
+          )
+        }
+        <a class="btn btn-ghost" href="#contact">
+          Contact
+          <Icon name="arrow-down" size="1.05rem" class="nudge-y" />
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: 100dvh;
+    display: flex;
+    overflow: clip;
+  }
+
+  .inner {
+    /* The name is sized to the container, so it fills one line at any width. */
+    container-type: inline-size;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    padding-top: calc(var(--nav-h) + clamp(1.25rem, 4vh, 3rem));
+    --name-size: 11.35cqi;
+  }
+
+  .top {
+    position: relative;
+    z-index: 3;
+  }
+
+  .name {
+    position: relative;
+    z-index: 1;
+    margin-top: clamp(0.5rem, 1.6vh, 1.25rem);
+    font-size: var(--name-size);
+    font-weight: 700;
+    line-height: 0.9;
+    letter-spacing: -0.055em;
+    white-space: nowrap;
+    /* Pointer-driven weight changes are applied per letter from JS. */
+    font-variation-settings: "wght" 700;
+  }
+
+  .mask {
+    display: inline-block;
+    /* Room for descenders (the y in Abhyuday) inside the clipping box. */
+    padding: 0.04em 0.06em 0.16em 0;
+    margin-bottom: -0.16em;
+    overflow: clip;
+  }
+
+  .char {
+    display: inline-block;
+    will-change: transform;
+  }
+
+  .gap {
+    display: inline-block;
+    width: 0.24em;
+  }
+
+  .portrait {
+    position: absolute;
+    z-index: 2;
+    right: var(--gutter);
+    bottom: 0;
+    /* Tall enough that the top of the head overlaps the lower half of the name,
+       capped so it never crowds the text on narrow or very tall screens. */
+    height: min(
+      calc(100dvh - var(--nav-h) - clamp(1.25rem, 4vh, 3rem) - 2rem - var(--name-size) * 0.66),
+      calc(54cqi * 954 / 1034)
+    );
+    aspect-ratio: 1034 / 954;
+    pointer-events: none;
+  }
+
+  .portrait :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: bottom right;
+  }
+
+  .foot {
+    position: relative;
+    z-index: 3;
+    margin-top: auto;
+    padding-bottom: clamp(2rem, 7vh, 4.5rem);
+    max-width: min(40rem, 44cqi);
+  }
+
+  .line {
+    font-size: clamp(1.375rem, 2.55vw, 2.375rem);
+    line-height: 1.22;
+    letter-spacing: -0.025em;
+    color: var(--fg-muted);
+  }
+
+  .line strong {
+    color: var(--fg);
+    font-weight: 600;
+  }
+
+  .ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: clamp(1.25rem, 3vh, 2rem);
+  }
+
+  /* Phones: the name takes two lines and the portrait sits below the text. */
+  @media (max-width: 767px) {
+    .inner {
+      --name-size: 20cqi;
+    }
+
+    .name {
+      white-space: normal;
+      line-height: 0.88;
+    }
+
+    .gap {
+      display: block;
+      height: 0;
+    }
+
+    .foot {
+      margin-top: 1.5rem;
+      max-width: none;
+      padding-bottom: 0;
+    }
+
+    .portrait {
+      position: relative;
+      right: auto;
+      margin-top: auto;
+      margin-inline: calc(var(--gutter) * -1) 0;
+      align-self: flex-end;
+      height: auto;
+      width: min(100%, 26rem);
+      max-height: 44dvh;
+    }
+  }
+
+  /* Entrance: letters rise out of the mask, then the portrait and copy. */
+  @media (prefers-reduced-motion: no-preference) {
+    .char {
+      animation: rise 1.25s var(--ease-out) both;
+      animation-delay: calc(80ms + var(--i) * 42ms);
+    }
+
+    .portrait {
+      animation: portrait-in 1.5s var(--ease-out) both;
+      animation-delay: 380ms;
+    }
+
+    .top,
+    .foot {
+      animation: fade-up 1.1s var(--ease-out) both;
+    }
+
+    .top {
+      animation-delay: 60ms;
+    }
+
+    .foot {
+      animation-delay: 760ms;
+    }
+  }
+
+  @keyframes rise {
+    from {
+      transform: translateY(105%) rotate(6deg);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  @keyframes portrait-in {
+    from {
+      opacity: 0;
+      transform: translateY(5%) scale(1.03);
+      clip-path: inset(100% 0 0 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+      clip-path: inset(0);
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>

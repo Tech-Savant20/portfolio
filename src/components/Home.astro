@@ -1,0 +1,83 @@
+---
+import Base from "../layouts/Base.astro";
+import Nav from "./Nav.astro";
+import Hero from "./Hero.astro";
+import WorkStack from "./WorkStack.astro";
+import SmallBuilds from "./SmallBuilds.astro";
+import HomelabSection from "./HomelabSection.astro";
+import Skills from "./Skills.astro";
+import Credentials from "./Credentials.astro";
+import Contact from "./Contact.astro";
+import Footer from "./Footer.astro";
+import { roleList, roles, site, type RoleKey } from "../data/site";
+import { resumeHref, resumeHrefs } from "../lib/resume";
+
+interface Props {
+  role: RoleKey;
+}
+
+const { role } = Astro.props;
+const r = roles[role];
+const resume = resumeHref(role);
+const resumes = resumeHrefs();
+
+// Everything the client needs to switch views without a page load.
+const views = Object.fromEntries(
+  roleList.map((v) => [
+    v.key,
+    {
+      key: v.key,
+      path: v.path,
+      title: v.title,
+      description: v.description,
+      heroTitle: v.heroTitle,
+      heroBody: v.heroBody,
+      projectOrder: v.projectOrder,
+      skillOrder: v.skillOrder,
+      homelabFirst: v.homelabFirst,
+      resume: resumes[v.key],
+      og: `/og/${v.key}.png`,
+    },
+  ]),
+);
+
+const person = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: site.name,
+  url: site.url,
+  email: `mailto:${site.email}`,
+  jobTitle: r.heroTitle.replace(".", ""),
+  alumniOf: { "@type": "CollegeOrUniversity", name: "VIT Bhopal University" },
+  address: { "@type": "PostalAddress", addressLocality: "Pune", addressCountry: "IN" },
+  sameAs: [site.github, site.linkedin],
+};
+---
+
+<Base title={r.title} description={r.description} path={r.path} image={`/og/${role}.png`} jsonLd={person}>
+  <Nav slot="nav" mode="home" role={role} />
+
+  <Hero role={role} resume={resume} />
+  {r.homelabFirst && <HomelabSection />}
+  <WorkStack role={role} />
+  <SmallBuilds />
+  {!r.homelabFirst && <HomelabSection />}
+  <Skills role={role} />
+  <Credentials />
+  <Contact />
+
+  <Footer slot="footer" />
+  <script is:inline type="application/json" data-roles set:html={JSON.stringify(views)} />
+</Base>
+
+<script>
+  import { initReveal } from "../scripts/reveal";
+  import { initHeroPointer } from "../scripts/hero";
+  import { initStack } from "../scripts/stack";
+  import { initRoleSwitch } from "../scripts/roles";
+
+  initReveal();
+  initHeroPointer();
+  const stack = initStack();
+  initRoleSwitch({ onLayoutChange: () => stack.rebuild() });
+</script>

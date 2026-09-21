@@ -1,0 +1,164 @@
+---
+import type { Project } from "../data/projects";
+import Icon from "./Icon.astro";
+import ProjectVisual from "./ProjectVisual.astro";
+
+interface Props {
+  project: Project;
+}
+
+const { project } = Astro.props;
+---
+
+<article class="panel" data-project-panel data-slug={project.slug} aria-labelledby={`p-${project.slug}`}>
+  <div class="shade" aria-hidden="true"></div>
+  <div class="copy">
+    <p class="meta">{`${project.kind}, ${project.period}`}</p>
+    <h3 id={`p-${project.slug}`}>{project.name}</h3>
+    <p class="summary">{project.summary}</p>
+
+    <dl class="metrics">
+      {
+        project.metrics.map((m) => (
+          <div>
+            <dt>{m.label}</dt>
+            <dd>{m.value}</dd>
+          </div>
+        ))
+      }
+    </dl>
+
+    <div class="actions">
+      <a class="btn btn-ghost" href={`/work/${project.slug}`} data-astro-prefetch>
+        Read the case study
+        <Icon name="arrow-right" size="1.05rem" class="nudge-x" />
+      </a>
+      {
+        project.links.map((l) => (
+          <a class="link-arrow" href={l.href} target="_blank" rel="noopener">
+            {l.label}
+            <Icon name="arrow-up-right" size="0.95rem" />
+            <span class="sr-only">(opens in a new tab)</span>
+          </a>
+        ))
+      }
+    </div>
+  </div>
+  <div class="visual">
+    <ProjectVisual visual={project.visual} />
+  </div>
+</article>
+
+<style>
+  .panel {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(2rem, 4vw, 4.5rem);
+    align-items: center;
+    min-height: min(46rem, calc(100dvh - var(--nav-h) - 4rem));
+    padding: clamp(1.75rem, 3.5vw, 3.5rem);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    transform-origin: 50% 0;
+    overflow: hidden;
+  }
+
+  /* Darkens the panel as the next one slides over it. Opacity driven from JS. */
+  .shade {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: var(--bg);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .copy {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  h3 {
+    font-size: clamp(2.25rem, 4.6vw, 4.25rem);
+    line-height: 0.95;
+    letter-spacing: -0.045em;
+    font-weight: 650;
+  }
+
+  .summary {
+    font-size: 1.0625rem;
+    line-height: 1.55;
+    color: var(--fg-muted);
+    max-width: 34rem;
+  }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .metrics div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  /* Value first visually, label first in the markup for screen readers. */
+  .metrics dd {
+    order: -1;
+  }
+
+  dd {
+    font-size: clamp(1.75rem, 2.6vw, 2.5rem);
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1;
+  }
+
+  dt {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    color: var(--fg-muted);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .visual {
+    position: relative;
+    align-self: center;
+    min-width: 0;
+  }
+
+  @media (max-width: 1023px) {
+    .panel {
+      grid-template-columns: minmax(0, 1fr);
+      min-height: 0;
+    }
+
+    .visual {
+      order: -1;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .metrics {
+      gap: 0.75rem;
+    }
+
+    dt {
+      font-size: 0.75rem;
+    }
+  }
+</style>

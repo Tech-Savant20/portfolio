@@ -1,4 +1,4 @@
-# abhyudaytomar.com
+﻿# abhyudaytomar.com
 
 My portfolio. One site with three views (backend, cloud and AI/ML) that reorder
 the same work for whoever is reading, four case studies, and a live 3D map of my
@@ -47,8 +47,7 @@ sending email.
 1. `npx wrangler login`
 2. Email Sending: `npx wrangler email sending enable abhyudaytomar.com`
 3. Turnstile: create a widget for `abhyudaytomar.com` and `www.abhyudaytomar.com`,
-   then `npx wrangler secret put TURNSTILE_SECRET`, and set
-   `PUBLIC_TURNSTILE_SITEKEY` for the build (a `.env` file or the build settings).
+   then `npx wrangler secret put TURNSTILE_SECRET` and put the site key in `src/data/site.ts`.
 4. `npx wrangler secret put STATUS_TOKEN` (see `homelab/README.md`)
 5. `npm run deploy`. The KV namespace and the custom domains are set up on the
    first deploy.

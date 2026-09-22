@@ -8,6 +8,8 @@ export const site = {
   location: "Pune, India",
   relocation: "open to remote work or relocating to Delhi NCR or Hyderabad",
   eyebrow: "B.Tech CSE at VIT Bhopal · Graduating 2027",
+  /** Turnstile site key (public by design; the secret lives in the Worker). */
+  turnstileSitekey: "0x4AAAAAAE_ii0oHiBg6jmkB",
   /** Upload new versions to the same Drive file and this link keeps working. */
   resumeUrl: "https://drive.google.com/file/d/1pRn_HSHa3M7DMqFeYI8h26wXufjTNeal/view?usp=drive_link",
 } as const;

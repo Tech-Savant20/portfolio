@@ -2,9 +2,10 @@
 import { site } from "../data/site";
 import Icon from "./Icon.astro";
 
-// Cloudflare's documented always-pass test key keeps the form usable in dev.
+// Cloudflare's documented always-pass test key keeps the form usable in dev,
+// where the real key would reject localhost.
 const TEST_SITEKEY = "1x00000000000000000000AA";
-const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY ?? (import.meta.env.DEV ? TEST_SITEKEY : undefined);
+const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY ?? (import.meta.env.DEV ? TEST_SITEKEY : site.turnstileSitekey);
 ---
 
 <section id="contact" class="section contact" aria-labelledby="contact-title" data-section="contact">

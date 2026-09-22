@@ -12,6 +12,9 @@ node_modules/
 .dev.vars
 .dev.vars.*
 
+# homelab push token, copied to the server then deleted
+homelab/.status-token
+
 # private source material: never commit
 career.md
 resume.pdf

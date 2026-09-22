@@ -1,4 +1,4 @@
-﻿# abhyudaytomar.com
+# abhyudaytomar.com
 
 My portfolio. One site with three views (backend, cloud and AI/ML) that reorder
 the same work for whoever is reading, four case studies, and a live 3D map of my
@@ -45,7 +45,10 @@ sending email.
 ## Deploying
 
 1. `npx wrangler login`
-2. Email Sending: `npx wrangler email sending enable abhyudaytomar.com`
+2. Email: `npx wrangler email routing enable abhyudaytomar.com`, then
+   `npx wrangler email routing addresses create <your inbox>` and click the
+   verification link. Sending only to your own verified address is free on
+   every plan; arbitrary recipients would need Workers Paid.
 3. Turnstile: create a widget for `abhyudaytomar.com` and `www.abhyudaytomar.com`,
    then `npx wrangler secret put TURNSTILE_SECRET` and put the site key in `src/data/site.ts`.
 4. `npx wrangler secret put STATUS_TOKEN` (see `homelab/README.md`)

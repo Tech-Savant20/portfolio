@@ -33,11 +33,12 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
 
 <Base title={title} description={p.summary} path={`/work/${p.slug}`} image={`/og/${p.slug}.png`}>
   <Nav slot="nav" mode="article" />
+  <div class="progress" aria-hidden="true"></div>
 
   <article class="cs">
     <header class="head container-x">
-      <p class="meta" data-reveal>{`${p.kind}, ${p.period}`}</p>
-      <h1 data-reveal>{p.name}</h1>
+      <p class="meta" data-reveal data-scramble>{`${p.kind}, ${p.period}`}</p>
+      <h1 style={`view-transition-name: title-${p.slug}; view-transition-class: project-title`}>{p.name}</h1>
       <p class="lede summary" data-reveal>{p.summary}</p>
 
       <dl class:list={["facts", { "no-role": !cs.myRole }]} data-reveal>
@@ -64,7 +65,7 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
           <dd class="links">
             {
               p.links.map((l, i) => (
-                <a class:list={["btn", i === 0 ? "btn-primary" : "btn-ghost"]} href={l.href} target="_blank" rel="noopener">
+                <a class:list={["btn", i === 0 ? "btn-primary" : "btn-ghost"]} href={l.href} target="_blank" rel="noopener" data-magnetic>
                   {l.label}
                   <Icon name="arrow-up-right" size="1rem" class="nudge" />
                   <span class="sr-only">(opens in a new tab)</span>
@@ -78,21 +79,23 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
 
     {
       p.visual === "lastmile" && (
-        <div class="hero-visual container-x" data-reveal>
-          <ProjectVisual visual="lastmile" />
+        <div class="hero-visual container-x">
+          <div data-media>
+            <ProjectVisual visual="lastmile" />
+          </div>
         </div>
       )
     }
 
     <section class="block container-x" aria-labelledby="problem">
-      <h2 id="problem" class="block-title">The problem</h2>
+      <h2 id="problem" class="block-title" data-split>The problem</h2>
       <div class="block-body prose-body">
         {cs.problem.map((para) => <p>{para}</p>)}
       </div>
     </section>
 
     <section class="block container-x" aria-labelledby="built">
-      <h2 id="built" class="block-title">How it's built</h2>
+      <h2 id="built" class="block-title" data-split>How it's built</h2>
       <div class="block-body">
         <p class="prose-body">{cs.architecture.intro}</p>
         <div class="wide">
@@ -111,7 +114,7 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
     </section>
 
     <section class="block container-x" aria-labelledby="decisions">
-      <h2 id="decisions" class="block-title">Key decisions</h2>
+      <h2 id="decisions" class="block-title" data-split>Key decisions</h2>
       <div class="block-body decisions">
         {
           cs.decisions.map((d) => (
@@ -135,14 +138,14 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
     </section>
 
     <section class="block container-x" aria-labelledby="results">
-      <h2 id="results" class="block-title">Results</h2>
+      <h2 id="results" class="block-title" data-split>Results</h2>
       <div class="block-body">
         <dl class="results">
           {
             cs.results.metrics.map((m) => (
               <div data-reveal>
                 <dt>{m.label}</dt>
-                <dd>{m.value}</dd>
+                <dd data-count>{m.value}</dd>
               </div>
             ))
           }
@@ -170,7 +173,7 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
     </section>
 
     <section class="block container-x" aria-labelledby="next">
-      <h2 id="next" class="block-title">Limits and next steps</h2>
+      <h2 id="next" class="block-title" data-split>Limits and next steps</h2>
       <div class="block-body">
         <ul class="next-list">
           {cs.next.map((n) => <li data-reveal>{n}</li>)}
@@ -194,10 +197,48 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
 
 <script>
   import { initReveal } from "../../scripts/reveal";
+  import {
+    initSmoothScroll,
+    initSplitReveals,
+    initCountUps,
+    initMagnetic,
+    initMediaReveals,
+    initReadProgress,
+    initScramble,
+    initDrawIns,
+  } from "../../scripts/motion";
+
+  initSmoothScroll();
+  initSplitReveals();
   initReveal();
+  initCountUps();
+  initMagnetic();
+  initMediaReveals();
+  initReadProgress();
+  initScramble();
+  initDrawIns();
 </script>
 
 <style>
+  /* Reading progress. Scaled from JS (ScrollTrigger); hidden without motion. */
+  .progress {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .progress {
+      display: block;
+      position: fixed;
+      top: var(--nav-h);
+      left: 0;
+      right: 0;
+      z-index: var(--z-nav);
+      height: 2px;
+      background: var(--accent);
+      transform-origin: 0 50%;
+      transform: scaleX(0);
+    }
+  }
   .head {
     display: grid;
     gap: 1.5rem;

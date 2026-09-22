@@ -13,7 +13,7 @@ const ordered = roles[role].skillOrder.map((k) => skillGroups[k as keyof typeof 
 
 <section id="skills" class="section skills" aria-labelledby="skills-title" data-section="skills">
   <div class="container-x">
-    <h2 id="skills-title" class="section-title head" data-reveal>What I work with</h2>
+    <h2 id="skills-title" class="section-title head" data-reveal data-split>What I work with</h2>
     <div class="bento" data-skills>
       {
         ordered.map((g) => (

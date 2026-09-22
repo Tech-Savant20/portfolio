@@ -406,15 +406,95 @@
   }
 }
 
-/* Theme switch: the new theme grows out of the toggle as a circle. */
-::view-transition-old(root),
+/* ------------------------------------------------------- view transitions */
+
+/* Page to page: the old page lifts away, the new one settles in, and a
+   project's title glides from its card into the case-study header. */
+/* The @view-transition opt-in is an inline style in Base.astro.
+   Reduced motion gets an instant swap instead of the animations below. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+::view-transition-old(root) {
+  animation: page-out 0.35s var(--ease-in-out) both;
+}
+
 ::view-transition-new(root) {
+  /* Starts as the old page is nearly gone, so the two never read on top of each other. */
+  animation: page-in 0.6s var(--ease-out) 0.25s both;
+}
+
+::view-transition-group(*) {
+  animation-duration: 0.75s;
+  animation-timing-function: var(--ease-in-out);
+}
+
+/* The nav's middle differs between pages (role switch vs "All work"):
+   swap it in sequence instead of cross-fading two sets of labels. */
+::view-transition-old(site-nav) {
+  animation: vt-fade-out 0.15s var(--ease-in-out) both;
+}
+
+::view-transition-new(site-nav) {
+  animation: vt-fade-in 0.25s var(--ease-out) 0.15s both;
+}
+
+/* Project titles: only the new title travels, so no ghost of the old size shows. */
+::view-transition-old(*.project-title) {
+  animation: none;
+  opacity: 0;
+}
+
+::view-transition-new(*.project-title) {
+  animation: none;
+}
+
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: translateY(-2%);
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(3%);
+  }
+}
+
+/* Theme switch: the new theme grows out of the toggle as a circle. */
+:root.theme-vt::view-transition-old(root),
+:root.theme-vt::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
 }
 
-::view-transition-new(root) {
+:root.theme-vt::view-transition-new(root) {
   animation: theme-reveal 0.7s var(--ease-in-out);
+}
+
+/* Split headlines: room in the line masks for descenders. */
+.split-line-mask {
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
 }
 
 @keyframes theme-reveal {

@@ -15,6 +15,9 @@ node_modules/
 # homelab push token, copied to the server then deleted
 homelab/.status-token
 
+# reference packs (large, third-party): never commit
+all animations/
+
 # private source material: never commit
 career.md
 resume.pdf

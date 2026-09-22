@@ -13,8 +13,8 @@ const { project } = Astro.props;
 <article class="panel" data-project-panel data-slug={project.slug} aria-labelledby={`p-${project.slug}`}>
   <div class="shade" aria-hidden="true"></div>
   <div class="copy">
-    <p class="meta">{`${project.kind}, ${project.period}`}</p>
-    <h3 id={`p-${project.slug}`}>{project.name}</h3>
+    <p class="meta" data-scramble>{`${project.kind}, ${project.period}`}</p>
+    <h3 id={`p-${project.slug}`} style={`view-transition-name: title-${project.slug}; view-transition-class: project-title`}>{project.name}</h3>
     <p class="summary">{project.summary}</p>
 
     <dl class="metrics">
@@ -22,14 +22,14 @@ const { project } = Astro.props;
         project.metrics.map((m) => (
           <div>
             <dt>{m.label}</dt>
-            <dd>{m.value}</dd>
+            <dd data-count>{m.value}</dd>
           </div>
         ))
       }
     </dl>
 
     <div class="actions">
-      <a class="btn btn-ghost" href={`/work/${project.slug}`} data-astro-prefetch>
+      <a class="btn btn-ghost" href={`/work/${project.slug}`} data-astro-prefetch data-magnetic>
         Read the case study
         <Icon name="arrow-right" size="1.05rem" class="nudge-x" />
       </a>
@@ -44,7 +44,7 @@ const { project } = Astro.props;
       }
     </div>
   </div>
-  <div class="visual">
+  <div class="visual" data-media>
     <ProjectVisual visual={project.visual} />
   </div>
 </article>

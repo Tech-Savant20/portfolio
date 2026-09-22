@@ -11,7 +11,7 @@ const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY ?? (import.meta.env.DEV
 <section id="contact" class="section contact" aria-labelledby="contact-title" data-section="contact">
   <div class="container-x layout">
     <div class="intro">
-      <h2 id="contact-title" class="section-title" data-reveal>Hiring a 2027 graduate?</h2>
+      <h2 id="contact-title" class="section-title" data-reveal data-split>Hiring a 2027 graduate?</h2>
       <p class="lede" data-reveal>
         {`I'm looking for entry-level backend, full-stack and cloud roles. I'm based in Pune and ${site.relocation}.`}
       </p>
@@ -71,7 +71,7 @@ const sitekey = import.meta.env.PUBLIC_TURNSTILE_SITEKEY ?? (import.meta.env.DEV
             </div>
             <div class="turnstile" data-turnstile data-sitekey={sitekey} />
             <p class="form-error" role="alert" data-form-error hidden />
-            <button type="submit" class="btn btn-primary submit" data-submit>
+            <button type="submit" class="btn btn-primary submit" data-submit data-magnetic>
               <span data-submit-label>Send message</span>
               <Icon name="paper-plane-tilt" size="1.05rem" class="nudge" />
             </button>

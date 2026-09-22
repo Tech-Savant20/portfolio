@@ -2,6 +2,7 @@
 import Base from "../layouts/Base.astro";
 import Nav from "./Nav.astro";
 import Hero from "./Hero.astro";
+import Marquee from "./Marquee.astro";
 import WorkStack from "./WorkStack.astro";
 import SmallBuilds from "./SmallBuilds.astro";
 import HomelabSection from "./HomelabSection.astro";
@@ -58,6 +59,7 @@ const person = {
   <Nav slot="nav" mode="home" role={role} />
 
   <Hero role={role} resume={resume} />
+  <Marquee />
   {r.homelabFirst && <HomelabSection />}
   <WorkStack role={role} />
   <SmallBuilds />
@@ -75,9 +77,30 @@ const person = {
   import { initHeroPointer } from "../scripts/hero";
   import { initStack } from "../scripts/stack";
   import { initRoleSwitch } from "../scripts/roles";
+  import {
+    initSmoothScroll,
+    initSplitReveals,
+    initHeroScroll,
+    initCountUps,
+    initMagnetic,
+    initMediaReveals,
+    initMarquee,
+    initScramble,
+    initDrawIns,
+  } from "../scripts/motion";
 
+  initSmoothScroll();
+  // Split headings first: they take over from the generic fade-up reveal.
+  initSplitReveals();
   initReveal();
   initHeroPointer();
+  initHeroScroll();
+  initCountUps();
+  initMagnetic();
+  initMediaReveals();
+  initMarquee();
+  initScramble();
+  initDrawIns();
   const stack = initStack();
   initRoleSwitch({ onLayoutChange: () => stack.rebuild() });
 </script>

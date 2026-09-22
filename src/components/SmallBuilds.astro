@@ -8,14 +8,16 @@ const items = smallBuilds.map((slug) => projects[slug]);
 
 <section class="section small" aria-labelledby="small-title" data-section="small">
   <div class="container-x">
-    <h2 id="small-title" class="title" data-reveal>Smaller builds</h2>
+    <h2 id="small-title" class="title" data-reveal data-split>Smaller builds</h2>
     <div class="grid">
       {
         items.map((p, i) => (
           <article class="card" data-reveal style={`--reveal-delay:${i * 90}ms`}>
-            <ProjectVisual visual={p.visual} />
+            <div data-media>
+              <ProjectVisual visual={p.visual} />
+            </div>
             <div class="body">
-              <p class="meta">{`${p.kind}, ${p.period}`}</p>
+              <p class="meta" data-scramble>{`${p.kind}, ${p.period}`}</p>
               <h3>{p.name}</h3>
               <p class="summary">{p.summary}</p>
               <ul class="stack" aria-label="Built with">

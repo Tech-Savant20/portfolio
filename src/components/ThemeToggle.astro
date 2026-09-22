@@ -48,7 +48,10 @@ import Icon from "./Icon.astro";
     root.style.setProperty("--vt-x", `${x}px`);
     root.style.setProperty("--vt-y", `${y}px`);
     root.style.setProperty("--vt-r", `${r}px`);
-    document.startViewTransition(() => apply(next));
+    // Scopes the circle animation to theme switches, not page navigations.
+    root.classList.add("theme-vt");
+    const transition = document.startViewTransition(() => apply(next));
+    transition.finished.finally(() => root.classList.remove("theme-vt"));
   });
 
   media.addEventListener("change", () => {

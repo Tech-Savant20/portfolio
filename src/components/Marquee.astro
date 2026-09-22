@@ -1,0 +1,95 @@
+---
+import Icon from "./Icon.astro";
+
+// Tools from all three roles, so the strip reads the same in every view.
+const items = [
+  { name: "TypeScript", icon: "typescript" },
+  { name: "PostgreSQL", icon: "postgresql" },
+  { name: "Docker", icon: "docker" },
+  { name: "Next.js", icon: "nextdotjs" },
+  { name: "Tailscale", icon: "tailscale" },
+  { name: "TensorFlow", icon: "tensorflow" },
+  { name: "Prisma", icon: "prisma" },
+  { name: "Oracle Cloud", icon: "oracle" },
+  { name: "Python", icon: "python" },
+  { name: "Cloudflare Workers", icon: "cloudflareworkers" },
+  { name: "Firebase", icon: "firebase" },
+  { name: "Ubuntu", icon: "ubuntu" },
+  { name: "Node.js", icon: "nodedotjs" },
+  { name: "PyTorch", icon: "pytorch" },
+];
+---
+
+<div class="marquee" aria-label="Tools I use" role="region">
+  <div class="track" data-marquee-track>
+    {
+      [0, 1].map((copy) => (
+        <ul class="list" aria-hidden={copy === 1 ? "true" : undefined}>
+          {items.map((it) => (
+            <li>
+              <Icon name={it.icon} set="brand" size="1.5rem" />
+              <span>{it.name}</span>
+            </li>
+          ))}
+        </ul>
+      ))
+    }
+  </div>
+</div>
+
+<style>
+  .marquee {
+    overflow: hidden;
+    padding-block: clamp(1.5rem, 3vw, 2.25rem);
+    border-block: 1px solid var(--line);
+    /* Fade the ends so items slide in and out instead of being cut. */
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+
+  .track {
+    display: flex;
+    width: max-content;
+    will-change: transform;
+  }
+
+  .list {
+    display: flex;
+    gap: clamp(2.5rem, 5vw, 4.5rem);
+    padding-right: clamp(2.5rem, 5vw, 4.5rem);
+    list-style: none;
+    margin: 0;
+  }
+
+  li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: clamp(1.25rem, 2.4vw, 2rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+    color: var(--fg);
+  }
+
+  li :global(svg) {
+    color: var(--fg-muted);
+  }
+
+  /* Without motion it is a static, wrapping row of tools. */
+  @media (prefers-reduced-motion: reduce) {
+    .track,
+    .list {
+      width: auto;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .list[aria-hidden] {
+      display: none;
+    }
+
+    .marquee {
+      mask-image: none;
+    }
+  }
+</style>

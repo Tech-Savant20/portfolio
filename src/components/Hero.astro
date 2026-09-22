@@ -19,7 +19,7 @@ const chars = [..."Abhyuday"].map((c) => ({ c, space: false })).concat(
 
 <section class="hero" aria-labelledby="hero-name" data-hero>
   <div class="inner container-x">
-    <p class="eyebrow top">{site.eyebrow}</p>
+    <p class="eyebrow top" data-scramble>{site.eyebrow}</p>
 
     <h1 class="name" id="hero-name" data-hero-name>
       <span class="sr-only">Abhyuday Tomar</span>
@@ -51,14 +51,14 @@ const chars = [..."Abhyuday"].map((c) => ({ c, space: false })).concat(
       <div class="ctas">
         {
           resume && (
-            <a class="btn btn-primary" href={resume} target="_blank" rel="noopener" data-resume-link>
+            <a class="btn btn-primary" href={resume} target="_blank" rel="noopener" data-resume-link data-magnetic>
               Resume
               <Icon name="arrow-up-right" size="1.05rem" class="nudge" />
               <span class="sr-only">(opens in a new tab)</span>
             </a>
           )
         }
-        <a class="btn btn-ghost" href="#contact">
+        <a class="btn btn-ghost" href="#contact" data-magnetic>
           Contact
           <Icon name="arrow-down" size="1.05rem" class="nudge-y" />
         </a>

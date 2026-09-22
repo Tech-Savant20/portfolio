@@ -11,7 +11,7 @@ const realServers = servers.filter((s) => !s.peer);
   <div class="container-x">
     <div class="layout">
       <div class="copy">
-        <h2 id="homelab-title" class="section-title" data-reveal>Jarvis, my homelab</h2>
+        <h2 id="homelab-title" class="section-title" data-reveal data-split>Jarvis, my homelab</h2>
         <p class="lede" data-reveal>
           A laptop at home and two Oracle Cloud VMs on one Tailscale mesh, running 20+ containers for ₹0 a month. Each
           server is watched from another.
@@ -46,7 +46,7 @@ const realServers = servers.filter((s) => !s.peer);
           </ul>
         </div>
 
-        <a class="btn btn-ghost case" href="/work/jarvis-homelab" data-astro-prefetch data-reveal>
+        <a class="btn btn-ghost case" href="/work/jarvis-homelab" data-astro-prefetch data-reveal data-magnetic>
           Read the case study
           <Icon name="arrow-right" size="1.05rem" class="nudge-x" />
         </a>

@@ -115,7 +115,9 @@ const edges = diagram.edges.map((e, i) => {
   const q = anchor(e.to, ts, e.toOffset);
   const { d, mid } = route(p, q, fs, ts);
   const labelW = e.label ? e.label.length * 6.6 + 14 : 0;
-  return { ...e, d, mid, labelW, key: `${diagram.id}-e${i}` };
+  // When the diagram draws itself in, an edge follows the row it leaves from.
+  const step = boxes.get(e.from)!.n.row;
+  return { ...e, d, mid, labelW, step, key: `${diagram.id}-e${i}` };
 });
 
 const markerId = `${diagram.id}-arrow`;
@@ -123,7 +125,7 @@ const nodes = [...boxes.values()];
 const minWidth = Math.round(Math.min(width, 960) * 0.8);
 ---
 
-<figure class="diagram" data-reveal>
+<figure class="diagram" data-diagram>
   <div class="scroller" style={`--min:${minWidth}px`}>
     <svg
       viewBox={`0 0 ${width} ${height}`}
@@ -143,6 +145,15 @@ const minWidth = Math.round(Math.min(width, 960) * 0.8);
         <marker id={markerId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" class="arrowhead" />
         </marker>
+        {/* Each edge is revealed through a solid copy of itself, so dashed edges
+            and arrowheads draw in along the route too. */}
+        {
+          edges.map((e) => (
+            <mask id={`${e.key}-m`} maskUnits="userSpaceOnUse" x="-20" y="-20" width={width + 40} height={height + 40}>
+              <path d={e.d} class="draw" data-draw={e.step} />
+            </mask>
+          ))
+        }
       </defs>
 
       {
@@ -150,6 +161,7 @@ const minWidth = Math.round(Math.min(width, 960) * 0.8);
           <path
             d={e.d}
             class:list={["edge", { dashed: e.dashed }]}
+            mask={`url(#${e.key}-m)`}
             marker-end={`url(#${markerId})`}
             marker-start={e.both ? `url(#${markerId})` : undefined}
           />
@@ -158,7 +170,7 @@ const minWidth = Math.round(Math.min(width, 960) * 0.8);
 
       {
         nodes.map(({ n, x, y, w, h }) => (
-          <g class:list={["node", n.tone ?? "default"]}>
+          <g class:list={["node", n.tone ?? "default"]} data-step={n.row}>
             <rect x={x} y={y} width={w} height={h} />
             <text x={x + 16} y={y + 22 + 14} class="label">
               {n.label}
@@ -181,7 +193,7 @@ const minWidth = Math.round(Math.min(width, 960) * 0.8);
         edges
           .filter((e) => e.label)
           .map((e) => (
-            <g class="edge-label">
+            <g class="edge-label" data-step={e.step}>
               <rect x={e.mid[0] - e.labelW / 2} y={e.mid[1] - 10} width={e.labelW} height={20} rx="10" />
               <text x={e.mid[0]} y={e.mid[1] + 4} text-anchor="middle">
                 {e.label}
@@ -266,6 +278,12 @@ const minWidth = Math.round(Math.min(width, 960) * 0.8);
     fill: none;
     stroke: var(--fg-subtle);
     stroke-width: 1.25;
+  }
+
+  .draw {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 16;
   }
 
   .edge.dashed {

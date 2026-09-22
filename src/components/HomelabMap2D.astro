@@ -11,7 +11,17 @@ const { standalone = false } = Astro.props;
 
 <div class:list={["map2d", { standalone }]} data-map2d>
   <svg class="wires" aria-hidden="true" data-wires>
-    {links.map(([a, b]) => <path data-link={`${a}:${b}`} />)}
+    <defs>
+      {/* A solid copy of each dashed wire, drawn in when the map is first seen. */}
+      {
+        links.map(([a, b]) => (
+          <mask id={`wire-${a}-${b}`} maskUnits="userSpaceOnUse" x="-50%" y="-50%" width="200%" height="200%">
+            <path class="draw" data-link={`${a}:${b}`} data-draw />
+          </mask>
+        ))
+      }
+    </defs>
+    {links.map(([a, b]) => <path class="wire" data-link={`${a}:${b}`} mask={`url(#wire-${a}-${b})`} />)}
   </svg>
   {
     servers.map((s) => (
@@ -107,7 +117,7 @@ const { standalone = false } = Astro.props;
     pointer-events: none;
   }
 
-  .wires path {
+  .wire {
     fill: none;
     stroke: var(--accent);
     stroke-width: 1.5;
@@ -115,8 +125,14 @@ const { standalone = false } = Astro.props;
     opacity: 0.8;
   }
 
+  .draw {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 12;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
-    .wires path {
+    .wire {
       animation: flow 1.6s linear infinite;
     }
   }

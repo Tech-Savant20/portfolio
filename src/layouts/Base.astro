@@ -63,6 +63,9 @@ const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
     </script>
 
     {jsonLd && <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+    <!-- Cross-page transitions. Inline on purpose: Chrome drops the opt-in when
+         it only lives in the bundled stylesheet and page scripts run first. -->
+    <style is:inline>@view-transition{navigation:auto}</style>
     <slot name="head" />
   </head>
   <body>

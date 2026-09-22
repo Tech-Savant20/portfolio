@@ -82,6 +82,12 @@ const sectionHref = (id: string) => (onHome ? `#${id}` : `${home}#${id}`);
     width: 1px;
   }
 
+  /* Stays put while pages transition underneath it. Not during a theme
+     switch, where it should be part of the circle reveal like the rest. */
+  :global(:root:not(.theme-vt)) .nav {
+    view-transition-name: site-nav;
+  }
+
   .nav {
     position: fixed;
     inset: 0 0 auto;

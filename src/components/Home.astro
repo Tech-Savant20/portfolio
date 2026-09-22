@@ -77,6 +77,7 @@ const person = {
   import { initHeroPointer } from "../scripts/hero";
   import { initStack } from "../scripts/stack";
   import { initRoleSwitch } from "../scripts/roles";
+  import { initDeck } from "../scripts/deck";
   import {
     initSmoothScroll,
     initSplitReveals,
@@ -103,6 +104,7 @@ const person = {
   initScramble();
   initDrawIns();
   initHoverMarquee();
+  initDeck();
   const stack = initStack();
   initRoleSwitch({ onLayoutChange: () => stack.rebuild() });
 </script>

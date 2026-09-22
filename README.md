@@ -74,6 +74,19 @@ The project is `portfolio` (ref `tuboqyqbnyzewyrifhzp`, Mumbai). `.mcp.json`
 points Claude Code at the Supabase MCP server for it, so migrations and queries
 can be run from a session (`/mcp` to authenticate).
 
+## Certifications deck
+
+The certifications are a deck of cards (`src/scripts/deck.ts`). When the
+section scrolls in, the deck is shuffled with a random effect (riffle, spin or
+overhand, never the same twice running), dealt face down in a new order, and
+one card wiggles as a hint. If nobody clicks, the cards turn over by themselves
+when the visitor scrolls on or after 6 seconds. "Shuffle again" plays a shuffle
+sound; the automatic one is silent. On phones it is a deck you tap to deal from.
+Reduced motion shows the cards face up with no shuffling.
+
+The shuffle sounds in `public/sounds/` are cut from Kenney's
+[Casino Audio](https://kenney.nl/assets/casino-audio) pack (CC0).
+
 ## Notes
 
 - The site honours `prefers-reduced-motion`: no intro or scroll effects, and the

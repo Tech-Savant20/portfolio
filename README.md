@@ -52,8 +52,27 @@ sending email.
 3. Turnstile: create a widget for `abhyudaytomar.com` and `www.abhyudaytomar.com`,
    then `npx wrangler secret put TURNSTILE_SECRET` and put the site key in `src/data/site.ts`.
 4. `npx wrangler secret put STATUS_TOKEN` (see `homelab/README.md`)
-5. `npm run deploy`. The KV namespace and the custom domains are set up on the
+5. Supabase, for the archive of contact messages (optional, see below):
+   `npx wrangler secret put SUPABASE_URL` and
+   `npx wrangler secret put SUPABASE_SECRET_KEY`.
+6. `npm run deploy`. The KV namespace and the custom domains are set up on the
    first deploy.
+
+## Contact messages in Supabase
+
+Every submission that gets past Turnstile is written to a `contact_messages`
+table before the email goes out, so nothing is lost if mail delivery fails. The
+table is created by `supabase/migrations/20260923000000_contact_messages.sql`.
+
+Row level security is on and the table grants no policies, so the publishable
+(anon) key can neither read nor write it. The Worker uses a secret key, which is
+a Worker secret and never reaches the browser. Name, email, message, country and
+user agent are stored; the IP address is not. Supabase's advisor flags "RLS
+enabled, no policy" on this table; that is the intended deny-all setup.
+
+The project is `portfolio` (ref `tuboqyqbnyzewyrifhzp`, Mumbai). `.mcp.json`
+points Claude Code at the Supabase MCP server for it, so migrations and queries
+can be run from a session (`/mcp` to authenticate).
 
 ## Notes
 

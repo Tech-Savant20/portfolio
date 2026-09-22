@@ -139,6 +139,52 @@ export function initMediaReveals(root: ParentNode = document) {
   });
 }
 
+/**
+ * Smaller builds: a band of the project's tools slides over the row from
+ * whichever edge the pointer crossed, and leaves the same way.
+ */
+export function initHoverMarquee(root: ParentNode = document) {
+  if (!motionAllowed() || !finePointer()) return;
+  root.querySelectorAll<HTMLElement>("[data-marquee-row]").forEach((row) => {
+    const line = row.querySelector<HTMLElement>(".line");
+    const band = row.querySelector<HTMLElement>("[data-band]");
+    const inner = row.querySelector<HTMLElement>("[data-band-inner]");
+    if (!line || !band || !inner) return;
+
+    // The band starts hidden in CSS, in percent. Restate it here as GSAP's own
+    // percentage, or GSAP reads the resolved pixels and keeps them underneath.
+    gsap.set(band, { yPercent: 101, y: 0 });
+    gsap.set(inner, { yPercent: -101, y: 0 });
+
+    const defaults = { duration: 0.6, ease: "expo.out" };
+    // Which edge of the row the pointer is nearest, as a percentage offset.
+    const edge = (e: PointerEvent) => {
+      const r = line.getBoundingClientRect();
+      return e.clientY - r.top < r.height / 2 ? -101 : 101;
+    };
+
+    line.addEventListener("pointerenter", (e) => {
+      const from = edge(e);
+      row.classList.add("is-hover");
+      // The inner track slides the opposite way, so the text stays upright
+      // instead of riding in with the band.
+      gsap
+        .timeline({ defaults })
+        .set(band, { yPercent: from }, 0)
+        .set(inner, { yPercent: -from }, 0)
+        .to([band, inner], { yPercent: 0 }, 0);
+    });
+
+    line.addEventListener("pointerleave", (e) => {
+      const to = edge(e);
+      gsap
+        .timeline({ defaults, onComplete: () => row.classList.remove("is-hover") })
+        .to(band, { yPercent: to }, 0)
+        .to(inner, { yPercent: -to }, 0);
+    });
+  });
+}
+
 /** One marquee: it drifts on its own and speeds up and tilts with scroll velocity. */
 export function initMarquee() {
   const track = document.querySelector<HTMLElement>("[data-marquee-track]");

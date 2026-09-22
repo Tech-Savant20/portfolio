@@ -43,7 +43,9 @@
     // Hostnames Turnstile tokens may come from. Local dev overrides this in .dev.vars.
     "TURNSTILE_HOSTNAMES": "abhyudaytomar.com,www.abhyudaytomar.com"
   },
-  // Secrets, set with `wrangler secret put`: TURNSTILE_SECRET, STATUS_TOKEN
+  // Secrets, set with `wrangler secret put`: TURNSTILE_SECRET, STATUS_TOKEN,
+  // and, for the Supabase archive of contact messages, SUPABASE_URL and
+  // SUPABASE_SECRET_KEY. Without those two the form only emails.
 
   "routes": [
     { "pattern": "abhyudaytomar.com", "custom_domain": true },

@@ -4,7 +4,7 @@
  *
  *   GET  /api/status   latest homelab status, for the live map
  *   POST /api/status   the home server pushes a new status (bearer token)
- *   POST /api/contact  contact form: Turnstile check, then email to me
+ *   POST /api/contact  contact form: Turnstile check, archive in Supabase, email to me
  */
 
 const STATUS_KEY = "homelab:status";
@@ -115,6 +115,16 @@ interface ContactInput {
   token: string;
 }
 
+/**
+ * Supabase, where every submission is kept. Both are Worker secrets
+ * (`wrangler secret put`); without them the form still works and still emails.
+ */
+interface SupabaseEnv {
+  SUPABASE_URL?: string;
+  /** A secret key (sb_secret_...) or a legacy service_role key. */
+  SUPABASE_SECRET_KEY?: string;
+}
+
 async function contact(request: Request, env: Env): Promise<Response> {
   const allowedHosts = hostnames(env);
   const origin = request.headers.get("origin");
@@ -155,6 +165,9 @@ async function contact(request: Request, env: Env): Promise<Response> {
   const verified = await verifyTurnstile(input.token, ip, env, allowedHosts);
   if (!verified) return json({ ok: false, error: "verification" }, 403);
 
+  // Archive first: if the mail hop fails, the message is still on record.
+  await archive(env, input, request);
+
   const oneLine = (s: string) => s.replace(/[\r\n]+/g, " ");
   try {
     await env.EMAIL.send({
@@ -171,6 +184,40 @@ async function contact(request: Request, env: Env): Promise<Response> {
     return json({ ok: false, error: "send" }, 502);
   }
   return json({ ok: true });
+}
+
+/**
+ * Writes the message to Supabase with the secret key, which bypasses row level
+ * security (the table grants nobody else anything). Delivery is the email's
+ * job, so a failure here is logged and the visitor still gets an "ok".
+ */
+async function archive(env: Env, input: ContactInput, request: Request): Promise<void> {
+  const { SUPABASE_URL: url, SUPABASE_SECRET_KEY: key } = env as Env & SupabaseEnv;
+  if (!url || !key) return;
+  try {
+    const res = await fetch(`${url.replace(/\/$/, "")}/rest/v1/contact_messages`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        // New sb_secret_ keys aren't JWTs and belong in apikey alone; a legacy
+        // service_role JWT also goes in Authorization.
+        ...(key.startsWith("sb_") ? {} : { authorization: `Bearer ${key}` }),
+        "content-type": "application/json",
+        prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        name: input.name,
+        email: input.email,
+        message: input.message,
+        country: request.cf?.country ?? null,
+        user_agent: request.headers.get("user-agent")?.slice(0, 300) ?? null,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) console.error("supabase insert failed", res.status, (await res.text()).slice(0, 200));
+  } catch (err) {
+    console.error("supabase insert failed", err);
+  }
 }
 
 /** Canonical Turnstile siteverify. Fails closed on any error. */

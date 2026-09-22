@@ -111,6 +111,17 @@
     line-height: 1.6;
   }
 
+  /* The footer waits behind the page and is uncovered as the last section
+     scrolls off it (it is sticky; see Footer.astro). For that to read as a
+     curtain the page itself has to be opaque and sit above it. */
+  @media (min-width: 768px) {
+    main {
+      position: relative;
+      z-index: 1;
+      background: var(--bg);
+    }
+  }
+
   /* Film grain on a fixed, non-interactive layer so it never repaints on scroll. */
   body::after {
     content: "";

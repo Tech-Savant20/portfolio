@@ -87,6 +87,7 @@ const person = {
     initMarquee,
     initScramble,
     initDrawIns,
+    initHoverMarquee,
   } from "../scripts/motion";
 
   initSmoothScroll();
@@ -101,6 +102,7 @@ const person = {
   initMarquee();
   initScramble();
   initDrawIns();
+  initHoverMarquee();
   const stack = initStack();
   initRoleSwitch({ onLayoutChange: () => stack.rebuild() });
 </script>

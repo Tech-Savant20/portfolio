@@ -87,9 +87,12 @@ scrolls on or after 6 seconds. "Shuffle again" plays a shuffle sound; the
 automatic one is silent. Reduced motion shows the cards face up with no hands.
 
 The dealer wears a Galaxy Watch 4 showing the time in Pune (`src/scripts/watch.ts`).
-Click it and it becomes the Omnitrix, projecting a hologram of Heatblast, Four
-Arms or XLR8. The Omnitrix and the aliens are hand-drawn fan art of Ben 10
-(Cartoon Network); the power-up sound is synthesised in the browser.
+Click it and it becomes the Omnitrix, projecting a hologram of the next alien:
+XLR8, Four Arms, Diamondhead, Swampfire and Ghostfreak. The holograms are traced
+from reference art into three tones and load from `public/holo/aliens.json` only
+when the deck comes near the screen. The Omnitrix and the aliens are Ben 10 fan
+art (Cartoon Network); the reference images stay out of the repo, in the
+git-ignored `photo-src/aliens/`. The power-up sound is synthesised in the browser.
 
 The shuffle sounds in `public/sounds/` are cut from Kenney's
 [Casino Audio](https://kenney.nl/assets/casino-audio) pack (CC0).

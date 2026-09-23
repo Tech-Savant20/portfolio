@@ -18,6 +18,17 @@ const fingers = [
 ];
 const BASE = 66;
 
+/** A tapered finger with a rounded tip, from its base up to `top`. */
+const fingerPath = (x: number, top: number) =>
+  `M${x - 9} ${BASE + 10} L${x - 8.6} ${top + 9} C${x - 8.6} ${top + 1} ${x - 5} ${top - 2} ${x} ${top - 2} ` +
+  `C${x + 5} ${top - 2} ${x + 8.4} ${top + 1} ${x + 8.4} ${top + 9} L${x + 9} ${BASE + 10} Z`;
+/** The nail near the tip (we see the back of the hand). */
+const nailPath = (x: number, top: number) =>
+  `M${x - 5} ${top + 14} L${x - 5} ${top + 6} Q${x - 5} ${top + 2} ${x} ${top + 2} Q${x + 5} ${top + 2} ${x + 5} ${top + 6} ` +
+  `L${x + 5} ${top + 14} Q${x} ${top + 16.5} ${x - 5} ${top + 14} Z`;
+/** Two wrinkles at each finger joint. */
+const jointPath = (x: number, y: number) => `M${x - 5} ${y} q5 2.4 10 0 M${x - 4} ${y + 3} q4 1.8 8 0`;
+
 // The watch sits on the left wrist.
 const WX = 100;
 const WY = 168;
@@ -31,19 +42,39 @@ const SEC_C = 2 * Math.PI * SEC_R;
     (["left", "right"] as const).map((side) => (
       <div class:list={["hand", side]} data-hand={`${side}-back`}>
         <svg viewBox="0 0 200 420" aria-hidden="true">
+          <defs>
+            {/* Lighter down the middle of the hand, warmer at the edges. */}
+            <linearGradient id={`skin-${side}-back`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#c78c64" />
+              <stop offset="0.5" stop-color="#e0ad88" />
+              <stop offset="1" stop-color="#c78c64" />
+            </linearGradient>
+          </defs>
           <g transform={side === "right" ? "translate(200 0) scale(-1 1)" : undefined}>
             {/* Runs far past the drawing; the stage's bottom edge (the table) cuts it off. */}
             <path class="suit" d="M46 204 L154 204 L196 1600 L4 1600 Z" />
             <path class="suit-seam" d="M100 214 L100 1600" />
-            <path class="skin" d="M62 146 L60 190 L140 190 L138 146 Z" />
-            {fingers.map((f, i) => (
-              <g data-finger={i}>
-                <rect class="skin" x={f.x - 9.5} y={BASE - f.len} width="19" height={f.len + 10} rx="9.5" />
-                <path class="crease" d={`M${f.x - 5} ${BASE - f.len * 0.42} q5 2.5 10 0`} />
-              </g>
-            ))}
-            <rect class="skin" x="55" y="56" width="90" height="104" rx="28" />
-            <path class="crease" d="M76 72 q24 -7 48 0" />
+            <path class="skin" fill={`url(#skin-${side}-back)`} d="M64 146 C62 162 61 176 60 190 L140 190 C139 176 138 162 136 146 Z" />
+            {fingers.map((f, i) => {
+              const top = BASE - f.len;
+              return (
+                <g data-finger={i}>
+                  <path class="skin" fill={`url(#skin-${side}-back)`} d={fingerPath(f.x, top)} />
+                  <path class="nail" d={nailPath(f.x, top)} />
+                  <path class="crease" d={jointPath(f.x, top + f.len * 0.36)} />
+                  <path class="crease" d={jointPath(f.x, top + f.len * 0.68)} />
+                </g>
+              );
+            })}
+            {/* Back of the hand: wide at the knuckles, narrowing to the wrist. */}
+            <path
+              class="skin"
+              fill={`url(#skin-${side}-back)`}
+              d="M58 72 C56 61 63 56 72 58 L128 58 C138 57 146 62 144 74 L141 128 C140 146 135 153 124 157 L76 157 C66 153 61 146 59 128 Z"
+            />
+            {/* Knuckles, and the tendons running down to the wrist. */}
+            <path class="crease" d={fingers.map((f) => `M${f.x - 6} 71 q6 -4.5 12 0`).join(" ")} />
+            <path class="tendon" d="M72 78 Q84 116 94 146 M91 78 Q96 114 99 146 M110 78 Q106 114 102 146 M128 78 Q116 116 106 146" />
             <rect class="cuff" x="50" y="182" width="100" height="30" rx="6" />
             <circle class="link" cx="138" cy="197" r="4.6" />
           </g>
@@ -97,10 +128,18 @@ const SEC_C = 2 * Math.PI * SEC_R;
     (["left", "right"] as const).map((side) => (
       <div class:list={["hand", side]} data-hand={`${side}-front`}>
         <svg viewBox="0 0 200 420">
+          <defs>
+            <linearGradient id={`skin-${side}-front`} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#c78c64" />
+              <stop offset="0.5" stop-color="#e3b18c" />
+              <stop offset="1" stop-color="#c78c64" />
+            </linearGradient>
+          </defs>
           <g transform={side === "right" ? "translate(200 0) scale(-1 1)" : undefined}>
             <g data-thumb>
-              <rect class="skin" x="129" y="58" width="22" height="70" rx="11" />
-              <path class="crease" d="M135 84 q5 2 10 0" />
+              <path class="skin" fill={`url(#skin-${side}-front)`} d="M129.5 128 L129.5 77 C129.5 64 135 57.5 140.5 57.5 C146.5 57.5 151.5 64 151.5 77 L151.5 128 Z" />
+              <path class="nail" d="M134.5 77 L134.5 68 Q134.5 62.5 140.5 62.5 Q146.5 62.5 146.5 68 L146.5 77 Q140.5 79.5 134.5 77 Z" />
+              <path class="crease" d="M135 95 q5.5 2.4 11 0 M136 98 q4.5 1.8 9 0" />
             </g>
           </g>
         </svg>
@@ -117,33 +156,8 @@ const SEC_C = 2 * Math.PI * SEC_R;
         </linearGradient>
       </defs>
       <path class="beam" d="M6 228 L28 60 L152 60 L18 228 Z" fill="url(#holo-beam)" />
-      <g class="alien" data-alien="0">
-        {/* Heatblast: flame head on a rocky body. */}
-        <path d="M76 72 L70 44 L81 58 L84 30 L92 54 L100 28 L103 56 L112 40 L106 72 Z" />
-        <circle cx="90" cy="80" r="14" />
-        <path d="M68 96 L112 96 L107 150 L73 150 Z" />
-        <path d="M69 98 L52 136 L60 140 L78 108 Z M111 98 L128 136 L120 140 L102 108 Z" />
-        <path d="M75 148 L71 196 L85 196 L88 150 Z M92 150 L95 196 L109 196 L105 148 Z" />
-      </g>
-      <g class="alien" data-alien="1">
-        {/* Four Arms: broad chest, four arms, small head. */}
-        <path d="M82 72 L90 60 L98 72 Z" />
-        <circle cx="90" cy="84" r="11" />
-        <path d="M60 98 L120 98 L112 156 L68 156 Z" />
-        <path d="M61 100 L36 76 L30 86 L56 112 Z M119 100 L144 76 L150 86 L124 112 Z" />
-        <path d="M64 120 L40 150 L49 156 L72 132 Z M116 120 L140 150 L131 156 L108 132 Z" />
-        <path d="M70 154 L66 198 L84 198 L88 156 Z M92 156 L96 198 L114 198 L110 154 Z" />
-      </g>
-      <g class="alien" data-alien="2">
-        {/* XLR8: leaning raptor, long helmet, tail, wheels for feet. */}
-        <path d="M58 128 C66 102 104 96 120 108 C112 128 84 140 58 128 Z" />
-        <path d="M112 104 C126 88 148 86 154 96 C144 104 128 110 116 112 Z" />
-        <path d="M60 126 C42 128 26 140 10 160 C30 148 48 140 66 134 Z" />
-        <path d="M84 132 L78 170 L87 170 L93 134 Z M101 128 L104 168 L113 168 L109 128 Z" />
-        <circle cx="82" cy="176" r="8" />
-        <circle cx="108" cy="174" r="8" />
-        <path d="M104 116 L118 132 L113 136 L100 122 Z" />
-      </g>
+      {/* Filled from /holo/aliens.json on first use: traced three-tone silhouettes. */}
+      <g data-holo-aliens></g>
       <text class="holo-name" x="96" y="16" data-holo-name></text>
     </svg>
   </div>
@@ -156,8 +170,7 @@ const SEC_C = 2 * Math.PI * SEC_R;
     inset: 0;
     overflow: hidden;
     pointer-events: none;
-    --skin: #d9a47d;
-    --ink: #2a1f18;
+    --ink: #5a3a28;
     --suit: #1a1a1e;
     --suit-edge: #36363d;
   }
@@ -192,18 +205,33 @@ const SEC_C = 2 * Math.PI * SEC_R;
     overflow: visible;
   }
 
+  /* Fill comes from each shape's gradient; a soft brown outline, not black. */
   .skin {
-    fill: var(--skin);
     stroke: var(--ink);
-    stroke-width: 2.2;
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+  }
+
+  .nail {
+    fill: #f1cdb9;
+    stroke: #9a6a50;
+    stroke-width: 0.9;
   }
 
   .crease {
     fill: none;
     stroke: var(--ink);
-    stroke-width: 1.3;
+    stroke-width: 0.9;
     stroke-linecap: round;
-    opacity: 0.55;
+    opacity: 0.45;
+  }
+
+  .tendon {
+    fill: none;
+    stroke: #a8704c;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    opacity: 0.35;
   }
 
   .suit {
@@ -327,7 +355,8 @@ const SEC_C = 2 * Math.PI * SEC_R;
     mask-image: repeating-linear-gradient(to bottom, #000 0 2.6px, rgb(0 0 0 / 0.35) 2.6px 4px);
   }
 
-  .alien {
+  /* Added by the script, so outside this component's scoped styles. */
+  .holo :global(.alien) {
     fill: #43f24b;
     opacity: 0;
   }

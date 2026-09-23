@@ -4,11 +4,23 @@ import { soundOn } from "./sound-pref";
 /**
  * The dealer's watch (a Galaxy Watch 4, like mine): live Pune time, and on a
  * click the face turns into the Omnitrix and projects a hologram of the next
- * alien. Heatblast, Four Arms and XLR8 are drawn by hand as simple silhouettes.
+ * alien. The aliens are traced from reference art into three tones (body,
+ * mid-tones, highlights) and load from /holo/aliens.json the first time the
+ * deck comes near the screen, so they cost the page nothing until then.
  */
 
-const ALIENS = ["HEATBLAST", "FOUR ARMS", "XLR8"];
+interface Alien {
+  id: string;
+  name: string;
+  w: number;
+  h: number;
+  body: string;
+  mid: string;
+  light: string;
+}
+
 const HOLD = 4;
+const SVG_NS = "http://www.w3.org/2000/svg";
 
 const fmt = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Kolkata",
@@ -25,8 +37,53 @@ export function initWatch(stage: HTMLElement) {
   const dial = stage.querySelector<SVGGElement>("[data-watch-dial]");
   const holo = stage.querySelector<HTMLElement>("[data-holo]");
   const name = stage.querySelector<SVGTextElement>("[data-holo-name]");
-  const aliens = [...stage.querySelectorAll<SVGGElement>("[data-alien]")];
-  if (!btn || !time || !sec || !clock || !dial || !holo || !name || !aliens.length) return;
+  const slot = stage.querySelector<SVGGElement>("[data-holo-aliens]");
+  if (!btn || !time || !sec || !clock || !dial || !holo || !name || !slot) return;
+
+  // ---------------------------------------------------------------- aliens
+
+  let aliens: { name: string; el: SVGSVGElement }[] = [];
+  let loading: Promise<void> | null = null;
+
+  /** Builds one alien as a nested SVG that fits the hologram's projection area. */
+  const build = (a: Alien) => {
+    const pad = a.h * 0.04;
+    const svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "alien");
+    svg.setAttribute("x", "14");
+    svg.setAttribute("y", "22");
+    svg.setAttribute("width", "142");
+    svg.setAttribute("height", "200");
+    svg.setAttribute("viewBox", `${-pad} ${-pad} ${a.w + pad * 2} ${a.h + pad * 2}`);
+    svg.setAttribute("preserveAspectRatio", "xMidYMax meet");
+    for (const [d, alpha] of [[a.body, "0.22"], [a.mid, "0.55"], [a.light, "1"]] as const) {
+      const p = document.createElementNS(SVG_NS, "path");
+      p.setAttribute("d", d);
+      p.setAttribute("fill-opacity", alpha);
+      p.setAttribute("fill-rule", "evenodd");
+      svg.append(p);
+    }
+    slot.append(svg);
+    return { name: a.name, el: svg };
+  };
+
+  const load = () =>
+    (loading ??= fetch("/holo/aliens.json")
+      .then((r) => (r.ok ? (r.json() as Promise<Alien[]>) : []))
+      .then((list) => {
+        aliens = list.map(build);
+      })
+      .catch(() => {}));
+
+  // Fetch while the deck is being shuffled, well before anyone reaches the watch.
+  new IntersectionObserver(
+    ([e], io) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      void load();
+    },
+    { rootMargin: "400px 0px" },
+  ).observe(stage);
 
   // ---------------------------------------------------------------- clock
 
@@ -99,18 +156,20 @@ export function initWatch(stage: HTMLElement) {
     gsap.set(holo, { x, y });
   };
 
-  const activate = () => {
+  const activate = async () => {
+    await load();
+    if (!aliens.length) return;
     run?.kill();
     const i = next;
     next = (next + 1) % aliens.length;
-    name.textContent = ALIENS[i] ?? "";
+    name.textContent = aliens[i].name;
     placeHolo();
     whirr();
 
-    const alien = aliens[i];
+    const alien = aliens[i].el;
     run = gsap
       .timeline({ onComplete: () => (run = null) })
-      .set(aliens, { opacity: 0 })
+      .set(aliens.map((a) => a.el), { opacity: 0 })
       .set(holo, { autoAlpha: 0, scaleY: 0.05 })
       // The face turns into the dial.
       .to(clock, { opacity: 0, duration: 0.15 }, 0)
@@ -127,5 +186,5 @@ export function initWatch(stage: HTMLElement) {
       .to(clock, { opacity: 1, duration: 0.3 }, HOLD + 1);
   };
 
-  btn.addEventListener("click", activate);
+  btn.addEventListener("click", () => void activate());
 }

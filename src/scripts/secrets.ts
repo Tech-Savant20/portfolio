@@ -70,12 +70,13 @@ export function toast(message: string) {
 /** ↑ ↑ ↓ ↓ ← → ← → B A: the site turns Omnitrix green for a while. */
 export function initKonami() {
   const code = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
-  let at = 0;
+  // The last few keys, so an extra ↑ at the start doesn't spoil the attempt.
+  const recent: string[] = [];
   addEventListener("keydown", (e) => {
-    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    at = k === code[at] ? at + 1 : k === code[0] ? 1 : 0;
-    if (at < code.length) return;
-    at = 0;
+    recent.push(e.key.length === 1 ? e.key.toLowerCase() : e.key);
+    if (recent.length > code.length) recent.shift();
+    if (recent.length < code.length || recent.some((k, i) => k !== code[i])) return;
+    recent.length = 0;
     alienMode();
   });
 }

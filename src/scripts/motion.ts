@@ -25,13 +25,33 @@ export function initSmoothScroll() {
   gsap.ticker.lagSmoothing(0);
 }
 
-/** Headlines rise word by word out of a line mask when they scroll into view. */
+/**
+ * Runs setup steps one per task, so page start-up is a string of short tasks
+ * instead of one long one that blocks input (Total Blocking Time).
+ */
+export function inTasks(steps: (() => unknown)[]) {
+  const s = (globalThis as { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+  const yieldNow = () => (s?.yield ? s.yield() : new Promise<void>((r) => setTimeout(r, 0)));
+  void (async () => {
+    for (const step of steps) {
+      try {
+        step();
+      } catch (err) {
+        console.error(err);
+      }
+      await yieldNow();
+    }
+  })();
+}
+
+/**
+ * Headlines rise word by word out of a line mask when they scroll into view.
+ * Splitting measures every line, so each headline is split only when it comes
+ * within a screen of the viewport, not all of them at load.
+ */
 export function initSplitReveals(root: ParentNode = document) {
   if (!motionAllowed()) return;
-  root.querySelectorAll<HTMLElement>("[data-split]").forEach((el) => {
-    // The fade-up reveal would fight this one.
-    el.removeAttribute("data-reveal");
-    el.classList.add("is-in");
+  const split = (el: HTMLElement) =>
     SplitText.create(el, {
       type: "lines,words",
       mask: "lines",
@@ -47,6 +67,21 @@ export function initSplitReveals(root: ParentNode = document) {
           scrollTrigger: { trigger: el, start: "top 88%", once: true },
         }),
     });
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        io.unobserve(e.target);
+        split(e.target as HTMLElement);
+      }
+    },
+    { rootMargin: "0px 0px 100% 0px" },
+  );
+  root.querySelectorAll<HTMLElement>("[data-split]").forEach((el) => {
+    // The fade-up reveal would fight this one.
+    el.removeAttribute("data-reveal");
+    el.classList.add("is-in");
+    io.observe(el);
   });
 }
 

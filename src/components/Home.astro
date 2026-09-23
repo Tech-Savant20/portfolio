@@ -89,22 +89,27 @@ const person = {
     initScramble,
     initDrawIns,
     initHoverMarquee,
+    inTasks,
   } from "../scripts/motion";
 
-  initSmoothScroll();
-  // Split headings first: they take over from the generic fade-up reveal.
-  initSplitReveals();
-  initReveal();
-  initHeroPointer();
-  initHeroScroll();
-  initCountUps();
-  initMagnetic();
-  initMediaReveals();
-  initMarquee();
-  initScramble();
-  initDrawIns();
-  initHoverMarquee();
-  initDeck();
-  const stack = initStack();
-  initRoleSwitch({ onLayoutChange: () => stack.rebuild() });
+  // One step per task, above-the-fold first, so start-up never blocks input for long.
+  let stack: ReturnType<typeof initStack> | null = null;
+  inTasks([
+    initSmoothScroll,
+    // Split headings first: they take over from the generic fade-up reveal.
+    initSplitReveals,
+    initReveal,
+    initHeroPointer,
+    initHeroScroll,
+    initMarquee,
+    initCountUps,
+    initMagnetic,
+    initMediaReveals,
+    initScramble,
+    initDrawIns,
+    initHoverMarquee,
+    () => (stack = initStack()),
+    () => initRoleSwitch({ onLayoutChange: () => stack?.rebuild() }),
+    initDeck,
+  ]);
 </script>

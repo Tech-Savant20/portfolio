@@ -219,18 +219,21 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
     initScramble,
     initDrawIns,
     initPackets,
+    inTasks,
   } from "../../scripts/motion";
 
-  initSmoothScroll();
-  initSplitReveals();
-  initReveal();
-  initCountUps();
-  initMagnetic();
-  initMediaReveals();
-  initReadProgress();
-  initScramble();
-  initDrawIns();
-  initPackets();
+  inTasks([
+    initSmoothScroll,
+    initSplitReveals,
+    initReveal,
+    initReadProgress,
+    initCountUps,
+    initMagnetic,
+    initMediaReveals,
+    initScramble,
+    initDrawIns,
+    initPackets,
+  ]);
 </script>
 
 <style>

@@ -288,10 +288,7 @@ function reveal(footer: HTMLElement) {
   // than being split into lines.
   const lines = [...footer.querySelectorAll<HTMLElement>("[data-footer-rise]")];
 
-  const chars = name ? SplitText.create(name, { type: "chars", mask: "chars" }).chars : [];
-  if (chars.length) gsap.set(chars, { yPercent: 120 });
-  if (lines.length) gsap.set(lines, { yPercent: 110 });
-  if (art) gsap.set(art, { autoAlpha: 0, xPercent: 12 });
+  let chars: Element[] = [];
 
   const show = () => {
     if (chars.length)
@@ -307,7 +304,17 @@ function reveal(footer: HTMLElement) {
     if (art) gsap.to(art, { autoAlpha: 0, xPercent: 12, duration: 0.35, ease: "power2.in", overwrite: true });
   };
 
-  ScrollTrigger.create({ trigger: main, start: "bottom bottom-=8%", onEnter: show, onLeaveBack: hide });
-  // Pages that open already scrolled to the end never cross that line.
-  if (main.getBoundingClientRect().bottom <= innerHeight * 0.92) show();
+  // Splitting the name and hiding the lines waits until the end of the page is
+  // a screen and a half away: the footer is still covered then, and page load
+  // doesn't pay for it.
+  const setup = () => {
+    chars = name ? SplitText.create(name, { type: "chars", mask: "chars" }).chars : [];
+    if (chars.length) gsap.set(chars, { yPercent: 120 });
+    if (lines.length) gsap.set(lines, { yPercent: 110 });
+    if (art) gsap.set(art, { autoAlpha: 0, xPercent: 12 });
+    ScrollTrigger.create({ trigger: main, start: "bottom bottom-=8%", onEnter: show, onLeaveBack: hide });
+    // Pages that open already scrolled to the end never cross that line.
+    if (main.getBoundingClientRect().bottom <= innerHeight * 0.92) show();
+  };
+  ScrollTrigger.create({ trigger: main, start: () => `bottom bottom+=${Math.round(innerHeight * 1.5)}`, once: true, onEnter: setup });
 }

@@ -7,7 +7,8 @@ gsap.registerPlugin(ScrollTrigger, SplitText);
 /**
  * The footer sits behind the page (CSS does that with position: sticky) and is
  * uncovered as the last section scrolls away. This file does the rest:
- * the portrait redrawn as ASCII, characters lighting up under the pointer, and
+ * the portrait redrawn as ASCII that tilts toward the pointer in 3D (with its
+ * bright parts standing out in relief), characters lighting up under it, and
  * the name and columns rising once the footer comes out.
  */
 
@@ -139,6 +140,8 @@ async function ascii(footer: HTMLElement) {
 
   let colors = theme();
   let size = 0;
+  /** Where the pointer is over the footer, -1 to 1 on each axis, smoothed. */
+  const view = { x: 0, y: 0 };
 
   const measure = () => {
     const width = canvas.clientWidth;
@@ -159,14 +162,18 @@ async function ascii(footer: HTMLElement) {
     const now = performance.now();
     let busy = false;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Relief: the brighter a cell (forehead, nose, cheekbones), the nearer it
+    // sits, so it shifts further with the pointer than the shadows do.
+    const depth = size * 1.8;
     for (const c of cells) {
       const lit = c.lit > now;
       busy ||= lit;
       // Dark theme: bright pixels get the heavy characters. Light theme: the opposite.
       const t = colors.dark ? c.level : 1 - c.level;
       const char = RAMP[Math.round(t * (RAMP.length - 1))];
-      const x = c.col * size;
-      const y = c.row * size;
+      const near = c.level - 0.5;
+      const x = c.col * size + view.x * depth * near;
+      const y = c.row * size + view.y * depth * near;
       if (lit) {
         ctx.globalAlpha = 1;
         ctx.fillStyle = colors.accent;
@@ -238,6 +245,25 @@ async function ascii(footer: HTMLElement) {
   const driftX = wrap ? gsap.quickTo(wrap, "x", { duration: 0.9, ease: "power3.out" }) : null;
   const driftY = wrap ? gsap.quickTo(wrap, "y", { duration: 0.9, ease: "power3.out" }) : null;
 
+  // 3D: the portrait turns toward the pointer, and the relief in draw() moves
+  // with the same smoothed position.
+  gsap.set(canvas, { transformPerspective: 900, transformOrigin: "50% 55%" });
+  const tiltY = gsap.quickTo(canvas, "rotationY", { duration: 0.9, ease: "power3.out" });
+  const tiltX = gsap.quickTo(canvas, "rotationX", { duration: 0.9, ease: "power3.out" });
+  const viewX = gsap.quickTo(view, "x", { duration: 0.9, ease: "power3.out", onUpdate: () => void paint() });
+  const viewY = gsap.quickTo(view, "y", { duration: 0.9, ease: "power3.out", onUpdate: () => void paint() });
+  const look = (nx: number, ny: number) => {
+    tiltY(nx * 14);
+    tiltX(-ny * 9);
+    viewX(nx);
+    viewY(ny);
+  };
+  footer.addEventListener("pointerleave", () => {
+    look(0, 0);
+    driftX?.(0);
+    driftY?.(0);
+  });
+
   footer.addEventListener("pointermove", (e) => {
     const now = performance.now();
     if (now - last < 33) return;
@@ -246,6 +272,12 @@ async function ascii(footer: HTMLElement) {
     const box = footer.getBoundingClientRect();
     driftX?.((e.clientX - (box.left + box.width / 2)) * 0.02);
     driftY?.((e.clientY - (box.top + box.height / 2)) * 0.03);
+    const art = canvas.getBoundingClientRect();
+    const clamp = (v: number) => Math.max(-1, Math.min(1, v));
+    look(
+      clamp((e.clientX - (art.left + art.width / 2)) / (box.width / 2)),
+      clamp((e.clientY - (art.top + art.height / 2)) / (box.height / 2)),
+    );
 
     const r = canvas.getBoundingClientRect();
     if (!r.width) return;

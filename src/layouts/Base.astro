@@ -4,6 +4,7 @@ import "@fontsource-variable/geist-mono";
 import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 import "../styles/global.css";
 import { site } from "../data/site";
+import Terminal from "../components/Terminal.astro";
 
 interface Props {
   title: string;
@@ -75,6 +76,7 @@ const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
       <slot />
     </main>
     <slot name="footer" />
+    <Terminal />
 
     {
       beaconToken && (

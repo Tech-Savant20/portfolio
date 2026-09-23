@@ -306,6 +306,71 @@ export function initDrawIns(root: ParentNode = document) {
   });
 }
 
+/**
+ * A sample request travelling through each architecture diagram: a glowing
+ * dot runs along the edges in order, and a line under the diagram says which
+ * hop it is on. Runs only while the diagram is on screen.
+ */
+export function initPackets(root: ParentNode = document) {
+  if (!motionAllowed()) return;
+  root.querySelectorAll<HTMLElement>("[data-diagram]").forEach((fig) => {
+    const svg = fig.querySelector<SVGSVGElement>("svg");
+    const readout = fig.querySelector<HTMLElement>("[data-packet-readout]");
+    const edges = [...fig.querySelectorAll<SVGPathElement>("path.edge")]
+      .map((p, i) => ({ p, i, step: Number(p.dataset.step || 0), label: p.dataset.label || "" }))
+      .sort((a, b) => a.step - b.step || a.i - b.i);
+    if (!svg || !readout || !edges.length) return;
+    readout.textContent = "sample request · ready";
+
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute("r", "5");
+    dot.setAttribute("fill", "var(--accent)");
+    dot.style.filter = "drop-shadow(0 0 5px var(--accent))";
+    dot.style.opacity = "0";
+    svg.append(dot);
+
+    const tl = gsap.timeline({ paused: true, repeat: -1, repeatDelay: 1.2 });
+    edges.forEach((e, k) => {
+      const len = e.p.getTotalLength();
+      const at = { t: 0 };
+      tl.call(() => {
+        readout.textContent = `sample request · hop ${k + 1} of ${edges.length}${e.label ? ` · ${e.label}` : ""}`;
+      })
+        .set(dot, { opacity: 1 })
+        .fromTo(
+          at,
+          { t: 0 },
+          {
+            t: 1,
+            duration: Math.min(0.9, 0.25 + len / 600),
+            ease: "power1.inOut",
+            onUpdate: () => {
+              const pt = e.p.getPointAtLength(at.t * len);
+              dot.setAttribute("cx", String(pt.x));
+              dot.setAttribute("cy", String(pt.y));
+            },
+          },
+        )
+        .to({}, { duration: 0.08 });
+    });
+    tl.call(() => {
+      readout.textContent = `sample request · ${edges.length} hops, done`;
+    }).set(dot, { opacity: 0 });
+
+    // Start once the diagram has drawn itself in; pause whenever it's off screen.
+    let started = false;
+    new IntersectionObserver(
+      ([en]) => {
+        if (!en.isIntersecting) return void tl.pause();
+        if (started) return void tl.resume();
+        started = true;
+        gsap.delayedCall(2.2, () => tl.play());
+      },
+      { threshold: 0.3 },
+    ).observe(fig);
+  });
+}
+
 /** Thin accent bar under the nav that fills as you read a case study. */
 export function initReadProgress() {
   const bar = document.querySelector<HTMLElement>(".progress");

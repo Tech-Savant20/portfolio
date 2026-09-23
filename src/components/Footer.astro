@@ -55,6 +55,7 @@ const ascii = await getImage({ src: portrait, width: 160, format: "webp" });
 
     <div class="base">
       <p>© {year} {site.name} · {site.location}</p>
+      <p class="secrets" data-secrets>0 / 5 secrets found</p>
       <a class="top" href="#main">
         Back to top
         <Icon name="arrow-up" size="0.9rem" class="nudge-up" />
@@ -163,6 +164,15 @@ const ascii = await getImage({ src: portrait, width: 160, format: "webp" });
     border-top: 1px solid var(--line);
     font-size: 0.875rem;
     color: var(--fg-muted);
+  }
+
+  .secrets {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+
+  .secrets:global(.has-found) {
+    color: var(--accent-ink);
   }
 
   .top {

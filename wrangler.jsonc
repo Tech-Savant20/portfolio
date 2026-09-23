@@ -18,6 +18,17 @@
   // (720 writes a day, inside the free plan's 1,000). Created on first deploy.
   "kv_namespaces": [{ "binding": "STATUS" }],
 
+  // Daily uptime counts per service for /status, one row per service per IST
+  // day, bumped on every push. Schema in worker/migrations.
+  "d1_databases": [
+    {
+      "binding": "UPTIME",
+      "database_name": "abhyudaytomar-uptime",
+      "database_id": "e95912db-159e-4355-bbfd-9adfaf8e7b33",
+      "migrations_dir": "worker/migrations"
+    }
+  ],
+
   // Contact form mail. Locked to one sender and one destination, so the Worker
   // can never be used to email anyone else.
   "send_email": [

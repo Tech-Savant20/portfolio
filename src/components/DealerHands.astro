@@ -205,6 +205,11 @@ const SEC_C = 2 * Math.PI * SEC_R;
     overflow: visible;
   }
 
+  /* A resting hand notices the pointer (and waves), but only where it is drawn. */
+  .hands-back .hand svg {
+    pointer-events: visiblePainted;
+  }
+
   /* Fill comes from each shape's gradient; a soft brown outline, not black. */
   .skin {
     stroke: var(--ink);

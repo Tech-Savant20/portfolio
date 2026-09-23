@@ -1,5 +1,6 @@
 import { gsap } from "gsap";
 import { soundOn } from "./sound-pref";
+import { findSecret } from "./secrets";
 
 /**
  * The dealer's watch (a Galaxy Watch 4, like mine): live Pune time, and on a
@@ -162,28 +163,42 @@ export function initWatch(stage: HTMLElement) {
     run?.kill();
     const i = next;
     next = (next + 1) % aliens.length;
-    name.textContent = aliens[i].name;
     placeHolo();
     whirr();
 
+    findSecret("omnitrix");
     const alien = aliens[i].el;
-    run = gsap
+    // Like turning the dial in the show: the other aliens flash past before one locks in.
+    const others = [...aliens.slice(i + 1), ...aliens.slice(0, i)].map((a) => a.el);
+    const STEP = 0.09;
+    const lock = 0.5 + others.length * STEP;
+    const tl = gsap
       .timeline({ onComplete: () => (run = null) })
       .set(aliens.map((a) => a.el), { opacity: 0 })
       .set(holo, { autoAlpha: 0, scaleY: 0.05 })
       // The face turns into the dial.
       .to(clock, { opacity: 0, duration: 0.15 }, 0)
       .fromTo(dial, { opacity: 0, rotation: -90, svgOrigin: "100 168" }, { opacity: 1, rotation: 0, duration: 0.4, ease: "back.out(2)" }, 0.05)
-      .to(dial, { scale: 1.12, svgOrigin: "100 168", duration: 0.12, yoyo: true, repeat: 1 }, 0.42)
-      // The hologram rises out of it, flickering.
-      .to(holo, { autoAlpha: 1, scaleY: 1, duration: 0.4, ease: "expo.out" }, 0.5)
-      .to(alien, { opacity: 0.9, duration: 0.05, repeat: 5, yoyo: true, ease: "none" }, 0.55)
-      .set(alien, { opacity: 0.9 }, 0.85)
-      .to(holo, { y: "-=6", duration: 1, yoyo: true, repeat: 3, ease: "sine.inOut" }, 0.9)
+      // The projection opens dim while the dial spins through the others.
+      .to(holo, { autoAlpha: 0.75, scaleY: 1, duration: 0.3, ease: "expo.out" }, 0.4)
+      .call(() => (name.textContent = ""), [], 0.4);
+    others.forEach((el, k) => {
+      const t = 0.5 + k * STEP;
+      tl.set(el, { opacity: 0.45 }, t).set(el, { opacity: 0 }, t + STEP * 0.85);
+      tl.to(dial, { rotation: `+=${360 / (others.length + 1)}`, svgOrigin: "100 168", duration: STEP * 0.8, ease: "none" }, t);
+    });
+    tl.call(() => (name.textContent = aliens[i].name), [], lock)
+      .to(dial, { scale: 1.12, svgOrigin: "100 168", duration: 0.12, yoyo: true, repeat: 1 }, lock)
+      // Locked in: full brightness, with a flicker.
+      .to(holo, { autoAlpha: 1, duration: 0.2 }, lock)
+      .to(alien, { opacity: 0.9, duration: 0.05, repeat: 5, yoyo: true, ease: "none" }, lock + 0.05)
+      .set(alien, { opacity: 0.9 }, lock + 0.35)
+      .to(holo, { y: "-=6", duration: 1, yoyo: true, repeat: 3, ease: "sine.inOut" }, lock + 0.4)
       // Then it powers down and the clock comes back.
-      .to(holo, { autoAlpha: 0, scaleY: 0.05, duration: 0.3, ease: "power2.in" }, HOLD + 0.6)
-      .to(dial, { opacity: 0, rotation: 90, svgOrigin: "100 168", duration: 0.3 }, HOLD + 0.8)
-      .to(clock, { opacity: 1, duration: 0.3 }, HOLD + 1);
+      .to(holo, { autoAlpha: 0, scaleY: 0.05, duration: 0.3, ease: "power2.in" }, lock + HOLD)
+      .to(dial, { opacity: 0, rotation: "+=90", svgOrigin: "100 168", duration: 0.3 }, lock + HOLD + 0.2)
+      .to(clock, { opacity: 1, duration: 0.3 }, lock + HOLD + 0.4);
+    run = tl;
   };
 
   btn.addEventListener("click", () => void activate());

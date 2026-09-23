@@ -1,0 +1,203 @@
+---
+/**
+ * A small shell that drops down over any page: press ` (or long-press the AT
+ * logo on a phone). Commands are in src/scripts/terminal.ts; the facts it
+ * prints come from src/data, serialised below.
+ */
+import { projects, caseStudySlugs } from "../data/projects";
+import { site } from "../data/site";
+import { certifications } from "../data/credentials";
+
+const data = {
+  site: {
+    name: site.name,
+    email: site.email,
+    github: site.github,
+    linkedin: site.linkedin,
+    resume: site.resumeUrl,
+    location: site.location,
+    relocation: site.relocation,
+    eyebrow: site.eyebrow,
+  },
+  projects: Object.values(projects).map((p) => ({
+    slug: p.slug,
+    name: p.name,
+    kind: p.kind,
+    period: p.period,
+    summary: p.summary,
+    stack: p.stack,
+    caseStudy: (caseStudySlugs as readonly string[]).includes(p.slug),
+  })),
+  certs: certifications.map((c) => `${c.name} (${c.issuer})`),
+};
+---
+
+<div class="term" data-terminal hidden role="dialog" aria-modal="true" aria-label="Terminal">
+  <div class="term-bar">
+    <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="term-title">abhyuday@jarvis: ~</span>
+    <button type="button" class="term-close" data-terminal-close aria-label="Close terminal">esc</button>
+  </div>
+  <div class="term-out" data-terminal-out aria-live="polite"></div>
+  <form class="term-line" data-terminal-form autocomplete="off">
+    <label for="term-input" class="prompt">abhyuday@jarvis:~$</label>
+    <input id="term-input" data-terminal-input spellcheck="false" autocapitalize="off" autocomplete="off" />
+  </form>
+</div>
+
+<script is:inline type="application/json" data-terminal-data set:html={JSON.stringify(data)} />
+
+<script>
+  import { initTerminal } from "../scripts/terminal";
+  import { initKonami, showCount } from "../scripts/secrets";
+  import { initXray } from "../scripts/xray";
+  initTerminal();
+  initKonami();
+  initXray();
+  showCount();
+</script>
+
+<style>
+  .term {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: var(--z-skip);
+    height: min(62vh, 34rem);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    background: rgb(10 10 11 / 0.97);
+    color: #d6d6d2;
+    border-bottom: 1px solid #2c2c31;
+    box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.8);
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    backdrop-filter: blur(6px);
+  }
+
+  .term[hidden] {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .term:not([hidden]) {
+      animation: drop 0.35s var(--ease-out);
+    }
+  }
+
+  @keyframes drop {
+    from {
+      transform: translateY(-100%);
+    }
+  }
+
+  .term-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #222226;
+    padding-top: calc(0.5rem + env(safe-area-inset-top, 0px));
+  }
+
+  .dots {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .dots i {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 999px;
+    background: #3a3a40;
+  }
+
+  .dots i:first-child {
+    background: #ff5a1f;
+  }
+
+  .term-title {
+    flex: 1;
+    color: #8a8a90;
+    font-size: 0.75rem;
+  }
+
+  .term-close {
+    border: 1px solid #34343a;
+    background: transparent;
+    color: #a6a6aa;
+    border-radius: 6px;
+    padding: 0.1rem 0.5rem;
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+
+  .term-out {
+    overflow-y: auto;
+    padding: 0.75rem 1rem 0.25rem;
+    overscroll-behavior: contain;
+  }
+
+  .term-out :global(p) {
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+  }
+
+  .term-out :global(.cmd) {
+    color: #ededea;
+  }
+
+  .term-out :global(.cmd::before) {
+    content: "$ ";
+    color: #ff5a1f;
+  }
+
+  .term-out :global(.dim) {
+    color: #8a8a90;
+  }
+
+  .term-out :global(.ok) {
+    color: #7ee08a;
+  }
+
+  .term-out :global(.warn) {
+    color: #ff6b35;
+  }
+
+  .term-out :global(a) {
+    color: #ff6b35;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .term-line {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem 0.75rem;
+  }
+
+  .prompt {
+    color: #ff5a1f;
+    white-space: nowrap;
+  }
+
+  .term-line input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: #ededea;
+    font: inherit;
+    caret-color: #ff5a1f;
+  }
+
+  @media (max-width: 480px) {
+    .prompt {
+      font-size: 0.75rem;
+    }
+  }
+</style>

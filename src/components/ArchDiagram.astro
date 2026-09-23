@@ -161,6 +161,8 @@ const minWidth = Math.round(Math.min(width, 960) * 0.8);
           <path
             d={e.d}
             class:list={["edge", { dashed: e.dashed }]}
+            data-step={e.step}
+            data-label={e.label}
             mask={`url(#${e.key}-m)`}
             marker-end={`url(#${markerId})`}
             marker-start={e.both ? `url(#${markerId})` : undefined}
@@ -203,6 +205,8 @@ const minWidth = Math.round(Math.min(width, 960) * 0.8);
       }
     </svg>
   </div>
+  {/* Filled by the packet animation: which hop a sample request is on. */}
+  <p class="readout" data-packet-readout aria-hidden="true"></p>
   {caption && <figcaption>{caption}</figcaption>}
 </figure>
 
@@ -303,6 +307,18 @@ const minWidth = Math.round(Math.min(width, 960) * 0.8);
     fill: var(--fg-muted);
     font-family: var(--font-mono);
     font-size: 11px;
+  }
+
+  .readout {
+    min-height: 1.4em;
+    margin-top: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent-ink);
+  }
+
+  .readout:empty {
+    display: none;
   }
 
   figcaption {

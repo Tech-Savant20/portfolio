@@ -5,6 +5,7 @@ import Footer from "../../components/Footer.astro";
 import Icon from "../../components/Icon.astro";
 import CodeBlock from "../../components/CodeBlock.astro";
 import ArchDiagram from "../../components/ArchDiagram.astro";
+import RatePlayground from "../../components/RatePlayground.astro";
 import HomelabMap2D from "../../components/HomelabMap2D.astro";
 import ProjectVisual from "../../components/ProjectVisual.astro";
 import ConfusionMatrix from "../../components/charts/ConfusionMatrix.astro";
@@ -137,6 +138,17 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
       </div>
     </section>
 
+    {
+      p.slug === "lastmile-iq" && (
+        <section class="block container-x" aria-labelledby="playground">
+          <h2 id="playground" class="block-title" data-split>Try the rate engine</h2>
+          <div class="block-body">
+            <RatePlayground />
+          </div>
+        </section>
+      )
+    }
+
     <section class="block container-x" aria-labelledby="results">
       <h2 id="results" class="block-title" data-split>Results</h2>
       <div class="block-body">
@@ -206,6 +218,7 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
     initReadProgress,
     initScramble,
     initDrawIns,
+    initPackets,
   } from "../../scripts/motion";
 
   initSmoothScroll();
@@ -217,6 +230,7 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
   initReadProgress();
   initScramble();
   initDrawIns();
+  initPackets();
 </script>
 
 <style>

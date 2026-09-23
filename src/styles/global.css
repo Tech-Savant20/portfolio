@@ -516,3 +516,41 @@
     clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 100%) var(--vt-y, 0%));
   }
 }
+
+/* ------------------------------------------------------------- site extras */
+
+/* Toasts for secrets and other little notes (src/scripts/secrets.ts). */
+.site-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  z-index: var(--z-skip);
+  max-width: calc(100% - 2rem);
+  padding: 0.625rem 1.125rem;
+  border-radius: 999px;
+  background: var(--fg);
+  color: var(--bg);
+  font-size: 0.875rem;
+  font-weight: 550;
+  box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.55);
+  opacity: 0;
+  transform: translate(-50%, 1rem);
+  pointer-events: none;
+  transition:
+    opacity 0.3s ease,
+    transform 0.5s var(--ease-out);
+}
+
+.site-toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Konami code: the accent turns Omnitrix green for a while. Last in the file so
+   it beats the theme blocks, which have the same specificity. */
+:root.alien-mode {
+  --accent: #43f24b;
+  --accent-ink: #1fa82a;
+  --accent-wash: rgb(67 242 75 / 0.12);
+  --on-accent: #06200a;
+}

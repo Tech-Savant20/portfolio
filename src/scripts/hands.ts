@@ -82,5 +82,8 @@ export function createHands(stage: HTMLElement) {
     show(side: Side, on: boolean) {
       gsap.set(els[side], { autoAlpha: on ? 1 : 0 });
     },
+
+    /** The hand's back layer (sleeve, palm, fingers): the part you can point at. */
+    element: (side: Side) => els[side][0],
   };
 }

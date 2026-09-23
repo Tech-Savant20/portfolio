@@ -4,6 +4,7 @@
  *
  *   GET  /api/status   latest homelab status, for the live map
  *   POST /api/status   the home server pushes a new status (bearer token)
+ *   GET  /api/uptime   30 days of daily uptime per service, for /status
  *   POST /api/contact  contact form: Turnstile check, archive in Supabase, email to me
  */
 
@@ -23,13 +24,17 @@ interface StoredStatus {
 }
 
 export default {
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url);
     try {
       if (url.pathname === "/api/status") {
         if (request.method === "GET" || request.method === "HEAD") return await getStatus(env);
-        if (request.method === "POST") return await putStatus(request, env);
+        if (request.method === "POST") return await putStatus(request, env, ctx);
         return methodNotAllowed("GET, POST");
+      }
+      if (url.pathname === "/api/uptime") {
+        if (request.method === "GET" || request.method === "HEAD") return await getUptime(request, env, ctx);
+        return methodNotAllowed("GET");
       }
       if (url.pathname === "/api/contact") {
         if (request.method === "POST") return await contact(request, env);
@@ -65,7 +70,7 @@ async function getStatus(env: Env): Promise<Response> {
   );
 }
 
-async function putStatus(request: Request, env: Env): Promise<Response> {
+async function putStatus(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   if (!env.STATUS_TOKEN || !(await bearerMatches(request, env.STATUS_TOKEN))) {
     return json({ ok: false, error: "unauthorized" }, 401);
   }
@@ -85,7 +90,97 @@ async function putStatus(request: Request, env: Env): Promise<Response> {
   // The Worker stamps the time itself rather than trusting the server's clock.
   const stored: StoredStatus = { updatedAt: new Date().toISOString(), services };
   await env.STATUS.put(STATUS_KEY, JSON.stringify(stored));
+  ctx.waitUntil(recordUptime(env, services));
   return new Response(null, { status: 204 });
+}
+
+// ---------------------------------------------------------------------------- uptime
+
+const UPTIME_DAYS = 30;
+const KEEP_DAYS = 400;
+const REPORTS = { server: "_", name: "reports" };
+
+/** YYYY-MM-DD in India time, `offset` days from today. */
+function istDay(offset = 0): string {
+  return new Date(Date.now() + 5.5 * 3600_000 + offset * 86400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * Adds this push to today's counters, one upsert per service plus one for the
+ * push itself. The live status is already saved, so a D1 hiccup only costs a
+ * sample of history.
+ */
+async function recordUptime(env: Env, services: ServiceStatus[]): Promise<void> {
+  const day = istDay();
+  const upsert = env.UPTIME.prepare(
+    `INSERT INTO uptime_daily (day, server, name, up, total) VALUES (?1, ?2, ?3, ?4, 1)
+     ON CONFLICT (day, server, name) DO UPDATE SET up = up + excluded.up, total = total + 1`,
+  );
+  // Uptime Kuma can list a name twice; count each service once per push.
+  const seen = new Map<string, ServiceStatus>();
+  for (const s of services) seen.set(`${s.server}\u0000${s.name}`, s);
+  try {
+    await env.UPTIME.batch([
+      ...[...seen.values()].map((s) => upsert.bind(day, s.server, s.name, s.up ? 1 : 0)),
+      upsert.bind(day, REPORTS.server, REPORTS.name, 1),
+      env.UPTIME.prepare("DELETE FROM uptime_daily WHERE day < ?1").bind(istDay(-KEEP_DAYS)),
+    ]);
+  } catch (err) {
+    console.error("uptime record failed", err);
+  }
+}
+
+interface UptimeRow {
+  day: string;
+  server: string;
+  name: string;
+  up: number;
+  total: number;
+}
+
+/**
+ * The last 30 IST days, oldest first. Each service gets `up` and `total`
+ * arrays aligned with `days` (0/0 where there's no data). Cached at the edge
+ * for five minutes, since it only moves every couple of minutes anyway.
+ */
+async function getUptime(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const cache = caches.default;
+  const key = new Request(new URL("/api/uptime", request.url).toString());
+  const hit = await cache.match(key);
+  if (hit) return hit;
+
+  const days = Array.from({ length: UPTIME_DAYS }, (_, i) => istDay(i - (UPTIME_DAYS - 1)));
+  const { results } = await env.UPTIME.prepare(
+    "SELECT day, server, name, up, total FROM uptime_daily WHERE day >= ?1 ORDER BY server, name, day",
+  )
+    .bind(days[0])
+    .all<UptimeRow>();
+
+  const index = new Map(days.map((d, i) => [d, i]));
+  const blank = () => ({ up: new Array<number>(UPTIME_DAYS).fill(0), total: new Array<number>(UPTIME_DAYS).fill(0) });
+  const reports = blank();
+  const services = new Map<string, { server: string; name: string; up: number[]; total: number[] }>();
+  for (const r of results) {
+    const i = index.get(r.day);
+    if (i === undefined) continue;
+    if (r.server === REPORTS.server && r.name === REPORTS.name) {
+      reports.total[i] = r.total;
+      continue;
+    }
+    const k = `${r.server}\u0000${r.name}`;
+    if (!services.has(k)) services.set(k, { server: r.server, name: r.name, ...blank() });
+    const s = services.get(k)!;
+    s.up[i] = r.up;
+    s.total[i] = r.total;
+  }
+
+  const res = json(
+    { days, reports: reports.total, services: [...services.values()], generatedAt: new Date().toISOString() },
+    200,
+    { "cache-control": "public, max-age=300" },
+  );
+  ctx.waitUntil(cache.put(key, res.clone()));
+  return res;
 }
 
 function parseServices(data: unknown): ServiceStatus[] | null {

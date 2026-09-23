@@ -4,6 +4,7 @@ import { motionAllowed } from "./motion";
 import { createHands, type Side, type Spot } from "./hands";
 import { setSoundOn, soundOn } from "./sound-pref";
 import { initWatch } from "./watch";
+import { findSecret } from "./secrets";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -481,8 +482,19 @@ export function initDeck() {
     }
   };
 
+  // Three shuffles by hand make you a card shark (one of the site's secrets).
+  let byHandCount = 0;
+  const shuffleByHand = () => {
+    if (busy || !started) return;
+    byHandCount++;
+    if (byHandCount === 3) findSecret("cardshark");
+    void shuffle(true);
+  };
+
   cards.forEach((c) => c.flip.addEventListener("click", () => onCard(c)));
-  shuffleBtn?.addEventListener("click", () => shuffle(true));
+  shuffleBtn?.addEventListener("click", shuffleByHand);
+  // The terminal's `shuffle` command.
+  addEventListener("deck:shuffle", shuffleByHand);
   revealBtn?.addEventListener("click", revealAll);
   soundBtn?.addEventListener("click", () => {
     soundIsOn = !soundIsOn;
@@ -509,6 +521,53 @@ export function initDeck() {
   };
   ScrollTrigger.create({ trigger: stage, start: "top 75%", once: true, onEnter: begin });
   if (stage.getBoundingClientRect().top < innerHeight * 0.75) begin();
+
+  // --------------------------------------------------- the dealer, idle
+
+  let inView = false;
+  new IntersectionObserver(([e]) => (inView = e.isIntersecting)).observe(stage);
+
+  /** After a while with nobody touching anything, the dealer shows off the table. */
+  const flourish = () => {
+    if (busy || !started || !inView || state === "deck" || !hands) return;
+    const tl = gsap.timeline();
+    cards.forEach((c, k) => {
+      const base = state === "spread" ? slotSpot(c.slot) : ribbonSpot(k);
+      tl.to(c.el, { y: base.y - 22, rotation: base.rotation + (k % 2 ? 3 : -3), duration: 0.25, ease: "sine.out", yoyo: true, repeat: 1 }, k * 0.09);
+    });
+    for (const s of sides()) {
+      const r = restSpot(s);
+      hands.to(tl, s, { ...r, y: r.y - 26, rotation: r.rotation - sign(s) * 10 }, "open", 0, 0.4, "power2.out");
+      hands.to(tl, s, r, "rest", 0.9, 0.5);
+    }
+  };
+
+  let idle = 0;
+  const resetIdle = () => {
+    window.clearTimeout(idle);
+    idle = window.setTimeout(() => {
+      flourish();
+      resetIdle();
+    }, 20000);
+  };
+  for (const ev of ["pointermove", "keydown", "scroll", "touchstart"]) addEventListener(ev, resetIdle, { passive: true });
+  resetIdle();
+
+  /** Point at a resting hand and it waves back. */
+  let waving = false;
+  const wave = (s: Side) => {
+    if (busy || !started || waving || !hands) return;
+    waving = true;
+    const r = restSpot(s);
+    const up = { ...r, y: r.y - 16 };
+    const tl = gsap.timeline({ onComplete: () => (waving = false) });
+    hands.to(tl, s, up, "open", 0, 0.2, "power2.out");
+    [1, -1, 1, -1].forEach((d, i) => hands.to(tl, s, { ...up, rotation: r.rotation + d * 9 }, null, 0.2 + i * 0.14, 0.14, "sine.inOut"));
+    hands.to(tl, s, r, "rest", 0.8, 0.35);
+  };
+  if (hands && matchMedia("(hover: hover)").matches) {
+    for (const s of ["left", "right"] as Side[]) hands.element(s).addEventListener("pointerenter", () => wave(s));
+  }
 
   // Resizing re-places everything; crossing the phone breakpoint re-lays the spread.
   new ResizeObserver(() => {

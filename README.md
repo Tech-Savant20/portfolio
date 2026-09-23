@@ -6,7 +6,7 @@ homelab.
 
 **Stack:** Astro 7, Tailwind CSS 4, GSAP, Three.js, TypeScript. Hosted on
 Cloudflare Workers (static assets plus a small Worker for the API), with
-Workers KV, Turnstile and Email Service.
+Workers KV, D1, Turnstile and Email Service.
 
 ## Layout
 
@@ -15,8 +15,10 @@ src/
   data/          all site content: roles, projects, case studies, homelab, skills
   components/    Astro components (hero, project stack, homelab, charts, diagrams)
   scripts/       client code: role switching, scroll effects, 3D scene, contact form
-  pages/         /, /cloud, /ai, /work/[slug], 404
-worker/          API: /api/status (homelab) and /api/contact
+  lib/           shared logic (the LastMile rate engine for its playground)
+  pages/         /, /cloud, /ai, /work/[slug], /status, 404
+worker/          API: /api/status and /api/uptime (homelab), /api/contact
+worker/migrations/  D1 schema for the uptime history
 homelab/         cron script that pushes live status from Uptime Kuma
 scripts/         build and maintenance scripts (see below)
 ```
@@ -55,8 +57,38 @@ sending email.
 5. Supabase, for the archive of contact messages (optional, see below):
    `npx wrangler secret put SUPABASE_URL` and
    `npx wrangler secret put SUPABASE_SECRET_KEY`.
-6. `npm run deploy`. The KV namespace and the custom domains are set up on the
+6. D1, for the uptime history: `npx wrangler d1 create abhyudaytomar-uptime`,
+   put its id in `wrangler.jsonc`, then
+   `npx wrangler d1 migrations apply abhyudaytomar-uptime --remote`
+   (and `--local` for `npm run preview`).
+7. `npm run deploy`. The KV namespace and the custom domains are set up on the
    first deploy.
+
+## Status page
+
+`/status` shows the live homelab status and 30 days of uptime per service. Each
+push to `POST /api/status` (every two minutes, from `homelab/`) also adds one
+check to that day's row for every service in D1 (`uptime_daily`, days in India
+time), plus a `reports` row counting the pushes, so a day when Jarvis was off
+shows as missing reports rather than downtime. `GET /api/uptime` returns the 30
+days and is cached at the edge for five minutes. At roughly 25 rows per push the
+writes stay well inside D1's free daily allowance; rows older than 400 days are
+dropped.
+
+## Easter eggs
+
+- A terminal opens with the backtick key, or a long press on the logo on phones
+  (`src/scripts/terminal.ts`). `help` lists the commands; `ping jarvis` asks the
+  real `/api/status`.
+- `xray` in the terminal outlines each component and shows the page's real
+  weight from resource timing (`src/scripts/xray.ts`).
+- The Konami code turns the site Omnitrix green for 15 seconds.
+- The footer counts the five secrets found (`src/scripts/secrets.ts`, kept in
+  `localStorage`): the terminal, X-ray, Konami, the Omnitrix, and three hand
+  shuffles in a row.
+- Case-study diagrams send a sample request along their edges, and the LastMile
+  IQ case study has a working copy of its rate engine
+  (`src/lib/rate-engine.ts`, checked against the project's own tests).
 
 ## Contact messages in Supabase
 
@@ -85,9 +117,12 @@ turns the ribbon over like dominoes and the cards slide apart; after that each
 card flips on its own. If nobody clicks, the ribbon turns over when the visitor
 scrolls on or after 6 seconds. "Shuffle again" plays a shuffle sound; the
 automatic one is silent. Reduced motion shows the cards face up with no hands.
+Left alone for 20 seconds the dealer does a small flourish, and a hand waves
+when the pointer passes over it.
 
 The dealer wears a Galaxy Watch 4 showing the time in Pune (`src/scripts/watch.ts`).
-Click it and it becomes the Omnitrix, projecting a hologram of the next alien:
+Click it and it becomes the Omnitrix; the dial flickers through the other aliens
+before locking in and projecting a hologram of the next one:
 XLR8, Four Arms, Diamondhead, Swampfire and Ghostfreak. The holograms are traced
 from reference art into three tones and load from `public/holo/aliens.json` only
 when the deck comes near the screen. The Omnitrix and the aliens are Ben 10 fan

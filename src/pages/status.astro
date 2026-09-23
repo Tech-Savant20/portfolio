@@ -1,0 +1,491 @@
+---
+import Base from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
+import Footer from "../components/Footer.astro";
+import Icon from "../components/Icon.astro";
+import { servers } from "../data/homelab";
+
+// Display names for the server ids the home server reports.
+const names = Object.fromEntries(servers.map((s) => [s.id, s.name]));
+---
+
+<Base
+  title="Homelab status | Abhyuday Tomar"
+  description="Live status and 30-day uptime of Jarvis, my homelab: a laptop at home and two Oracle Cloud VMs."
+  path="/status"
+>
+  <Nav slot="nav" mode="article" />
+
+  <article class="st container-x" data-uptime>
+    <header class="head">
+      <p class="eyebrow">Jarvis · homelab</p>
+      <h1 data-split>Status</h1>
+      <div class="now" data-now data-state="loading" aria-live="polite">
+        <span class="live-dot" aria-hidden="true"></span>
+        <div>
+          <p class="now-main" data-now-main>Checking live status</p>
+          <p class="now-sub" data-now-sub>&nbsp;</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="summary" aria-label="30-day summary">
+      <div>
+        <p class="big" data-overall>–</p>
+        <p class="cap">uptime across all services, last 30 days</p>
+      </div>
+      <div>
+        <p class="big" data-coverage>–</p>
+        <p class="cap">of expected reports received from home</p>
+      </div>
+      <div>
+        <p class="big" data-count-services>–</p>
+        <p class="cap">services watched by Uptime Kuma</p>
+      </div>
+    </section>
+
+    <div class="legend" aria-hidden="true">
+      <span><i class="b ok"></i>Up all day</span>
+      <span><i class="b minor"></i>Some downtime</span>
+      <span><i class="b major"></i>Down more than 5%</span>
+      <span><i class="b none"></i>No data</span>
+    </div>
+
+    <div class="groups" data-groups>
+      <p class="empty" data-empty>Loading history…</p>
+    </div>
+
+    <p class="note">
+      Uptime Kuma on each server checks the others. A cron job on Jarvis pushes the results to this site every two
+      minutes, and the Worker adds each push to a daily tally in Cloudflare D1. Days are in India time. If Jarvis itself
+      is offline, nothing is reported, so that shows up as missing reports rather than downtime.
+    </p>
+
+    <a class="btn btn-ghost" href="/work/jarvis-homelab" data-astro-prefetch>
+      How the homelab is built
+      <Icon name="arrow-right" size="1.05rem" class="nudge-x" />
+    </a>
+
+    <div class="tip" data-tip role="tooltip" hidden></div>
+  </article>
+
+  <script is:inline type="application/json" data-server-names set:html={JSON.stringify(names)} />
+
+  <Footer slot="footer" />
+</Base>
+
+<script>
+  import { initSmoothScroll, initSplitReveals } from "../scripts/motion";
+  import { describe, fetchStatus } from "../scripts/homelab/status";
+
+  initSmoothScroll();
+  initSplitReveals();
+
+  interface Uptime {
+    days: string[];
+    reports: number[];
+    services: { server: string; name: string; up: number[]; total: number[] }[];
+  }
+
+  /** The home server pushes every two minutes. */
+  const PUSHES_PER_DAY = 720;
+
+  const root = document.querySelector<HTMLElement>("[data-uptime]");
+  if (root) {
+    const q = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
+    const names: Record<string, string> = JSON.parse(
+      document.querySelector("[data-server-names]")?.textContent ?? "{}",
+    );
+    const pct = (n: number) => (n === 1 ? "100%" : `${(n * 100).toFixed(2)}%`);
+    const dayLabel = (d: string) =>
+      new Date(`${d}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
+
+    // Live summary, the same wording as the homelab section on the home page.
+    fetchStatus().then((p) => {
+      const d = describe(p);
+      q("[data-now]").dataset.state = d.state;
+      q("[data-now-main]").textContent = d.main;
+      q("[data-now-sub]").textContent = d.sub;
+    });
+
+    /** How many pushes a day should have had; today only counts time so far. */
+    const expected = (day: string, today: string) => {
+      if (day !== today) return PUSHES_PER_DAY;
+      const ist = new Date(Date.now() + 5.5 * 3600_000);
+      const minutes = ist.getUTCHours() * 60 + ist.getUTCMinutes();
+      return Math.max(1, Math.floor(minutes / 2));
+    };
+
+    const level = (up: number, total: number) => {
+      if (!total) return "none";
+      const r = up / total;
+      return r >= 0.995 ? "ok" : r >= 0.95 ? "minor" : "major";
+    };
+
+    const bars = (up: number[], total: number[], days: string[], kind: "service" | "reports", today: string) =>
+      days
+        .map((d, i) => {
+          let cls: string;
+          let tip: string;
+          if (kind === "reports") {
+            const want = expected(d, today);
+            const got = total[i];
+            cls = got ? level(Math.min(got, want), want) : "none";
+            tip = got ? `${dayLabel(d)} · ${got} of ~${want} reports` : `${dayLabel(d)} · no reports`;
+          } else {
+            cls = level(up[i], total[i]);
+            tip = total[i]
+              ? `${dayLabel(d)} · ${pct(up[i] / total[i])} up (${up[i]} of ${total[i]} checks)`
+              : `${dayLabel(d)} · no data`;
+          }
+          return `<i class="b ${cls}" data-tip-text="${tip}"></i>`;
+        })
+        .join("");
+
+    const row = (label: string, figure: string, barsHtml: string, sr: string) =>
+      `<li class="row"><span class="name">${label}</span><span class="bars" aria-hidden="true">${barsHtml}</span><span class="fig">${figure}</span><span class="sr-only">${sr}</span></li>`;
+
+    const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+    const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+
+    const render = (u: Uptime) => {
+      const groups = q("[data-groups]");
+      const today = u.days[u.days.length - 1];
+      const allUp = sum(u.services.map((s) => sum(s.up)));
+      const allTotal = sum(u.services.map((s) => sum(s.total)));
+      const firstIdx = u.reports.findIndex((n) => n > 0);
+
+      q("[data-count-services]").textContent = String(u.services.length || "–");
+      if (!allTotal || firstIdx < 0) {
+        groups.innerHTML = `<p class="empty">History started recording today. The bars fill in as the days go by; the live status above is current.</p>`;
+        return;
+      }
+      q("[data-overall]").textContent = pct(allUp / allTotal);
+      const wanted = sum(u.days.slice(firstIdx).map((d) => expected(d, today)));
+      q("[data-coverage]").textContent = pct(Math.min(1, sum(u.reports) / wanted));
+
+      const byServer = new Map<string, Uptime["services"]>();
+      for (const s of u.services) byServer.set(s.server, [...(byServer.get(s.server) ?? []), s]);
+
+      const since = firstIdx > 0 ? `<p class="since">Recording since ${dayLabel(u.days[firstIdx])}.</p>` : "";
+      const reportsRow = row(
+        "Reports from Jarvis",
+        pct(Math.min(1, sum(u.reports) / wanted)),
+        bars([], u.reports, u.days, "reports", today),
+        `${sum(u.reports)} reports received`,
+      );
+
+      groups.innerHTML =
+        since +
+        `<section class="group"><h2>Pipeline</h2><ul>${reportsRow}</ul></section>` +
+        [...byServer.entries()]
+          .map(([server, list]) => {
+            const rows = list
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((s) => {
+                const t = sum(s.total);
+                const figure = t ? pct(sum(s.up) / t) : "–";
+                return row(esc(s.name), figure, bars(s.up, s.total, u.days, "service", today), `${figure} up over 30 days`);
+              })
+              .join("");
+            return `<section class="group"><h2>${esc(names[server] ?? server)}</h2><ul>${rows}</ul></section>`;
+          })
+          .join("");
+    };
+
+    fetch("/api/uptime", { headers: { accept: "application/json" } })
+      .then((r) => (r.ok ? (r.json() as Promise<Uptime>) : Promise.reject(r.status)))
+      .then(render)
+      .catch(() => {
+        q("[data-groups]").innerHTML = `<p class="empty">Uptime history isn't reachable right now${
+          location.hostname === "localhost" ? " (it only runs on the live site or under wrangler dev)" : ""
+        }.</p>`;
+      });
+
+    // One shared tooltip for all the bars.
+    const tip = q("[data-tip]");
+    root.addEventListener("pointerover", (e) => {
+      const bar = (e.target as HTMLElement).closest<HTMLElement>("[data-tip-text]");
+      if (!bar) return void (tip.hidden = true);
+      tip.textContent = bar.dataset.tipText ?? "";
+      tip.hidden = false;
+      const r = bar.getBoundingClientRect();
+      const box = root.getBoundingClientRect();
+      const w = tip.offsetWidth;
+      const x = Math.min(Math.max(r.left + r.width / 2 - box.left - w / 2, 0), box.width - w);
+      tip.style.transform = `translate(${x}px, ${r.top - box.top - tip.offsetHeight - 8}px)`;
+    });
+    const hideTip = () => (tip.hidden = true);
+    root.addEventListener("pointerleave", hideTip);
+    addEventListener("scroll", hideTip, { passive: true });
+    addEventListener("resize", hideTip);
+  }
+</script>
+
+<style>
+  .st {
+    position: relative;
+    display: grid;
+    gap: clamp(2rem, 4vw, 3rem);
+    padding-top: calc(var(--nav-h) + clamp(3rem, 8vw, 6rem));
+    padding-bottom: clamp(4rem, 8vw, 7rem);
+    overflow-x: clip;
+  }
+
+  .head {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--accent-ink);
+  }
+
+  h1 {
+    font-size: clamp(3rem, 9vw, 7rem);
+    letter-spacing: -0.055em;
+    line-height: 0.92;
+  }
+
+  .now {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    max-width: 40rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .now-main {
+    font-weight: 600;
+    font-size: 1.0625rem;
+  }
+
+  .now-sub {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+  }
+
+  .live-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-top: 0.5rem;
+    border-radius: 999px;
+    background: var(--line-strong);
+    flex: none;
+  }
+
+  .now[data-state="live"] .live-dot,
+  .now[data-state="degraded"] .live-dot {
+    background: var(--accent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .now[data-state="live"] .live-dot {
+      animation: pulse 2.4s var(--ease-out) infinite;
+    }
+  }
+
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 0.6rem transparent;
+    }
+  }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-block: 1px solid var(--line);
+  }
+
+  .summary > div {
+    display: grid;
+    gap: 0.375rem;
+    padding: 1.5rem 1.5rem 1.5rem 0;
+  }
+
+  .summary > div + div {
+    padding-left: 1.5rem;
+    border-left: 1px solid var(--line);
+  }
+
+  .big {
+    font-size: clamp(2rem, 4.5vw, 3.25rem);
+    font-weight: 650;
+    letter-spacing: -0.045em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .cap {
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+  }
+
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .legend .b {
+    width: 0.5rem;
+    height: 1rem;
+  }
+
+  /* Bars are built by the script, so their styles are global to this page. */
+  .st :global(.b) {
+    display: block;
+    border-radius: 2px;
+    background: var(--line);
+  }
+
+  .st :global(.b.ok) {
+    background: var(--fg);
+    opacity: 0.82;
+  }
+
+  .st :global(.b.minor) {
+    background: color-mix(in oklab, var(--accent) 55%, var(--line));
+  }
+
+  .st :global(.b.major) {
+    background: var(--accent);
+  }
+
+  .groups {
+    display: grid;
+    gap: 2.5rem;
+  }
+
+  .groups :global(.group) {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .groups :global(h2) {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    letter-spacing: 0;
+    color: var(--fg-muted);
+    font-weight: 500;
+  }
+
+  .groups :global(ul) {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .groups :global(.row) {
+    display: grid;
+    grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr) 4.5rem;
+    align-items: center;
+    gap: 1.25rem;
+    padding-block: 0.625rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .groups :global(.name) {
+    font-weight: 550;
+    font-size: 0.9375rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .groups :global(.bars) {
+    display: grid;
+    grid-template-columns: repeat(30, minmax(0, 1fr));
+    gap: 3px;
+    height: 1.75rem;
+  }
+
+  .groups :global(.bars .b) {
+    height: 100%;
+    transition: transform 0.15s ease;
+  }
+
+  .groups :global(.bars .b:hover) {
+    transform: scaleY(1.15);
+  }
+
+  .groups :global(.fig) {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .groups :global(.empty),
+  .groups :global(.since) {
+    color: var(--fg-muted);
+  }
+
+  .note {
+    max-width: 46rem;
+    font-size: 0.9375rem;
+    color: var(--fg-muted);
+  }
+
+  .btn {
+    justify-self: start;
+  }
+
+  .tip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    padding: 0.375rem 0.625rem;
+    border-radius: 6px;
+    background: var(--fg);
+    color: var(--bg);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  @media (max-width: 767px) {
+    .summary {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .summary > div,
+    .summary > div + div {
+      padding: 1.25rem 0;
+      border-left: 0;
+    }
+
+    .summary > div + div {
+      border-top: 1px solid var(--line);
+    }
+
+    .groups :global(.row) {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.5rem 1rem;
+    }
+
+    .groups :global(.bars) {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      gap: 2px;
+    }
+  }
+</style>

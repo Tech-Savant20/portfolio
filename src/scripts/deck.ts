@@ -385,8 +385,13 @@ export function initDeck() {
     );
   };
 
-  /** Turns the ribbon over like dominoes; each card slides apart into its readable spot. */
-  const waveReveal = () => {
+  /**
+   * Slides the ribbon apart into the readable spots. With no card given it is
+   * the domino wave (Reveal all, auto-reveal): every card turns over as it goes.
+   * With a card, the ribbon spreads face down and only that card turns over,
+   * so the rest are still there to discover one by one.
+   */
+  const waveReveal = (only?: Card) => {
     disarm();
     state = "spread";
     busy = true;
@@ -402,10 +407,12 @@ export function initDeck() {
     cards.forEach((c, k) => {
       const d = k * 0.13;
       c.slot = k;
-      setFace(c, true, d);
+      if (!only) setFace(c, true, d);
       gsap.set(c.el, { zIndex: 20 + k, delay: d });
       gsap.to(c.el, { ...slotSpot(k), duration: 0.7, ease: "power3.inOut", delay: d + 0.25 });
     });
+    // The picked card turns over once it has landed in its spot.
+    if (only) setFace(only, true, only.slot * 0.13 + 0.8);
     gsap.delayedCall((n - 1) * 0.13 + 1, () => {
       busy = false;
       refresh();
@@ -467,7 +474,7 @@ export function initDeck() {
   const onCard = (c: Card) => {
     if (busy || state === "deck") return;
     disarm();
-    if (state === "ribbon") waveReveal();
+    if (state === "ribbon") waveReveal(c);
     else {
       setFace(c, !c.up);
       refresh();

@@ -42,8 +42,12 @@ export function initContact() {
   const w = window as TurnstileWindow;
   let widgetId: string | undefined;
   let scriptRequested = false;
+  /** Set while a submit is waiting for Turnstile to hand over a token. */
+  let onToken: ((token: string) => void) | null = null;
 
-  // Load Turnstile only when someone gets near the form.
+  // Turnstile loads only once someone starts filling in the form. It runs bot
+  // checks that are heavy and noisy in the console, so visitors who only read
+  // the page never load it.
   const renderWidget = () => {
     if (!w.turnstile || widgetId !== undefined) return;
     const dark = document.documentElement.dataset.theme
@@ -54,8 +58,26 @@ export function initContact() {
       action: "contact",
       theme: dark ? "dark" : "light",
       appearance: "interaction-only",
+      callback: (token: string) => {
+        onToken?.(token);
+        onToken = null;
+      },
     });
   };
+  /** The current token, or the next one, waiting up to `ms` for it. */
+  const tokenWithin = (ms: number) =>
+    new Promise<string | undefined>((resolve) => {
+      const now = widgetId !== undefined ? w.turnstile?.getResponse(widgetId) : undefined;
+      if (now) return resolve(now);
+      const timer = window.setTimeout(() => {
+        onToken = null;
+        resolve(undefined);
+      }, ms);
+      onToken = (token) => {
+        window.clearTimeout(timer);
+        resolve(token);
+      };
+    });
   const loadTurnstile = () => {
     if (scriptRequested) return;
     scriptRequested = true;
@@ -70,15 +92,6 @@ export function initContact() {
     });
     document.head.append(s);
   };
-  new IntersectionObserver(
-    (entries, obs) => {
-      if (entries.some((e) => e.isIntersecting)) {
-        obs.disconnect();
-        loadTurnstile();
-      }
-    },
-    { rootMargin: "400px 0px" },
-  ).observe(form);
   form.addEventListener("focusin", loadTurnstile, { once: true });
 
   // ---- validation ------------------------------------------------------------------
@@ -132,13 +145,17 @@ export function initContact() {
       return;
     }
     loadTurnstile();
-    const token = widgetId !== undefined ? w.turnstile?.getResponse(widgetId) : undefined;
+    submit.disabled = true;
+    submitLabel.textContent = "Checking...";
+    // Usually ready long before anyone finishes typing; if not, wait for it.
+    const token = await tokenWithin(10_000);
     if (!token) {
-      showFormError("The spam check hasn't finished yet. Give it a second and try again.");
+      submit.disabled = false;
+      submitLabel.textContent = "Send message";
+      showFormError("The spam check didn't finish. Give it a moment and try again.");
       return;
     }
 
-    submit.disabled = true;
     submitLabel.textContent = "Sending...";
     try {
       const res = await fetch("/api/contact", {

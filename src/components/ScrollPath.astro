@@ -1,0 +1,108 @@
+---
+/**
+ * A dotted S-shaped trail that weaves from side to side down the home page,
+ * one bend per section. It fills in with the accent colour as you scroll, and
+ * a glowing orb rides its tip. Desktop with a mouse only, and not with reduced
+ * motion; the geometry is measured from the page in scroll-path.ts.
+ */
+---
+
+<div class="trail" data-scroll-path aria-hidden="true" hidden>
+  <svg class="svg" preserveAspectRatio="none">
+    <path class="base" data-base d=""></path>
+    <path class="lit" data-lit d=""></path>
+    <g data-nodes></g>
+  </svg>
+</div>
+{/* The orb gets its own layer above the content, so cards never hide it. */}
+<div class="trail orb-layer" data-scroll-orb aria-hidden="true" hidden>
+  <svg class="svg" preserveAspectRatio="none">
+    <g class="orb" data-orb>
+      <circle class="halo" r="15"></circle>
+      <circle class="core" r="5.5"></circle>
+      <path class="nose" d="M7 -3.5 L13 0 L7 3.5 Z"></path>
+    </g>
+  </svg>
+</div>
+
+<script>
+  import { initScrollPath } from "../scripts/scroll-path";
+  initScrollPath();
+</script>
+
+<style>
+  .trail {
+    position: absolute;
+    inset: 0;
+    /* Behind the sections' content, above main's own background. */
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .orb-layer {
+    z-index: 4;
+  }
+
+  .svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    overflow: visible;
+  }
+
+  .base {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 1.5;
+    stroke-dasharray: 1 7;
+    stroke-linecap: round;
+  }
+
+  .lit {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    opacity: 0.7;
+  }
+
+  .svg :global(.node) {
+    fill: var(--bg);
+    stroke: var(--line-strong);
+    stroke-width: 1.5;
+    transition:
+      fill 0.3s ease,
+      stroke 0.3s ease;
+  }
+
+  .svg :global(.node.is-lit) {
+    fill: var(--accent);
+    stroke: var(--accent);
+  }
+
+  .orb {
+    filter: drop-shadow(0 0 6px var(--accent));
+  }
+
+  .halo {
+    fill: var(--accent);
+    opacity: 0.16;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: halo 2.2s ease-in-out infinite;
+  }
+
+  .core,
+  .nose {
+    fill: var(--accent);
+  }
+
+  @keyframes halo {
+    50% {
+      transform: scale(1.35);
+      opacity: 0.08;
+    }
+  }
+</style>

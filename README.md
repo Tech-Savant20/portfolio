@@ -80,6 +80,17 @@ rather than downtime.
 minutes; `/api/status` for 30 seconds. About 45,000 D1 rows are written a day,
 inside the free plan's 100,000; rows older than 400 days are dropped.
 
+## Trail and llms.txt
+
+On desktop, a dotted S-shaped trail (`ScrollPath.astro`, `src/scripts/scroll-path.ts`)
+weaves down the home page from margin to margin, one bend per section, built
+from the page's own layout. It fills in with the accent as you scroll and an orb
+rides its tip, a little below the middle of the screen.
+
+`/llms.txt` (`src/pages/llms.txt.ts`) is a plain-text summary of the site for
+AI tools, generated at build time from `src/data/`, so it never drifts from
+the pages.
+
 ## Easter eggs
 
 - A terminal opens with the backtick key, or a long press on the logo on phones

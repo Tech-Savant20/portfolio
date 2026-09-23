@@ -38,7 +38,13 @@ const thumbs = { "finance-tracker": financeDashboard } as Record<string, ImageMe
                             <span class="word">{s}</span>
                           ))}
                           {thumb ? (
-                            <Image src={thumb} alt="" widths={[360]} sizes="360px" class="thumb" />
+                            <Image
+                              src={thumb}
+                              alt={`${p.name} dashboard listing expenses read from scanned receipts`}
+                              widths={[360]}
+                              sizes="360px"
+                              class="thumb"
+                            />
                           ) : (
                             <span class="word dim">and back again</span>
                           )}

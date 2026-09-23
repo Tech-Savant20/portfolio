@@ -60,6 +60,9 @@ const headers = `/*
 
 /og/*
   Cache-Control: public, max-age=86400
+
+/llms.txt
+  Content-Type: text/plain; charset=utf-8
 `;
 
 await writeFile(join(DIST, "_headers"), headers);

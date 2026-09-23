@@ -2,6 +2,7 @@
 import Base from "../layouts/Base.astro";
 import Nav from "./Nav.astro";
 import Hero from "./Hero.astro";
+import ScrollPath from "./ScrollPath.astro";
 import Marquee from "./Marquee.astro";
 import WorkStack from "./WorkStack.astro";
 import SmallBuilds from "./SmallBuilds.astro";
@@ -58,6 +59,7 @@ const person = {
 <Base title={r.title} description={r.description} path={r.path} image={`/og/${role}.png`} jsonLd={person}>
   <Nav slot="nav" mode="home" role={role} />
 
+  <ScrollPath />
   <Hero role={role} resume={resume} />
   <Marquee />
   {r.homelabFirst && <HomelabSection />}

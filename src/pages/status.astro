@@ -157,7 +157,7 @@ const names = Object.fromEntries(servers.map((s) => [s.id, s.name]));
 
       q("[data-count-services]").textContent = String(u.services.length || "–");
       if (!allTotal || firstIdx < 0) {
-        groups.innerHTML = `<p class="empty">History started recording today. The bars fill in as the days go by; the live status above is current.</p>`;
+        groups.innerHTML = `<p class="empty">No reports from Jarvis yet. History starts with the first one, and the bars fill in day by day from there.</p>`;
         return;
       }
       q("[data-overall]").textContent = pct(allUp / allTotal);

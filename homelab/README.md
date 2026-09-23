@@ -15,7 +15,8 @@ Uptime Kuma (Jarvis, localhost:3001)
 ```
 
 Two minutes keeps the Worker at 720 KV writes a day, inside the free plan's
-1,000.
+1,000. Each push is also tallied per service per day in D1, which feeds the
+30-day bars on https://abhyudaytomar.com/status.
 
 ## Setup on Jarvis
 

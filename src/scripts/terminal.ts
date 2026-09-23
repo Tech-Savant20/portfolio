@@ -1,4 +1,4 @@
-import { SECRETS, findSecret, foundSecrets, type SecretId } from "./secrets";
+import { SECRETS, alienMode, findSecret, foundSecrets, type SecretId } from "./secrets";
 
 /**
  * The drop-down terminal. Press ` anywhere (outside a text field), or
@@ -251,6 +251,13 @@ export function initTerminal() {
     },
     omnitrix() {
       line("It's on the dealer's wrist, down in Credentials. Try clicking it.", "dim");
+      line("Or, with a keyboard: ↑ ↑ ↓ ↓ ← → ← → B A.", "dim");
+    },
+    // Not in help: the way into hype mode for phones, which have no arrow keys.
+    herotime() {
+      line("It's hero time.", "ok");
+      close();
+      alienMode();
     },
     sudo() {
       line("abhyuday is not in the sudoers file. This incident will be reported.", "warn");

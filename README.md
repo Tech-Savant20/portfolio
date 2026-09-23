@@ -82,7 +82,15 @@ dropped.
   real `/api/status`.
 - `xray` in the terminal outlines each component and shows the page's real
   weight from resource timing (`src/scripts/xray.ts`).
-- The Konami code turns the site Omnitrix green for 15 seconds.
+- The Konami code (or `herotime` in the terminal, for phones) starts hype mode
+  (`src/scripts/hype.ts`, loaded only then): a big Omnitrix dial spins through
+  the aliens and slams down with a flash and a shockwave, then for 20 seconds
+  the site is in alien mode (green tint, scanlines, glowing and glitching
+  headings, the alien's hologram in the corner, pointer sparks, a countdown).
+  The last three seconds go red and beep, like the watch timing out in the
+  show. Esc or "Power down" ends it early; reduced motion keeps only the
+  colours and the countdown. Sounds are synthesised and follow the deck's
+  sound switch.
 - The footer counts the five secrets found (`src/scripts/secrets.ts`, kept in
   `localStorage`): the terminal, X-ray, Konami, the Omnitrix, and three hand
   shuffles in a row.

@@ -67,7 +67,7 @@ export function toast(message: string) {
   toastTimer = window.setTimeout(() => toastEl?.classList.remove("is-on"), 3200);
 }
 
-/** ↑ ↑ ↓ ↓ ← → ← → B A: the site turns Omnitrix green for a while. */
+/** ↑ ↑ ↓ ↓ ← → ← → B A: hype mode, the Omnitrix takes over the site (hype.ts). */
 export function initKonami() {
   const code = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
   // The last few keys, so an extra ↑ at the start doesn't spoil the attempt.
@@ -81,12 +81,13 @@ export function initKonami() {
   });
 }
 
-let alienTimer = 0;
 export function alienMode() {
-  const root = document.documentElement;
-  root.classList.add("alien-mode");
   findSecret("konami");
-  toast("Alien mode: the whole site is on the Omnitrix for 15 seconds");
-  window.clearTimeout(alienTimer);
-  alienTimer = window.setTimeout(() => root.classList.remove("alien-mode"), 15000);
+  // Loaded on demand: nobody pays for it until they enter the code.
+  void import("./hype").then(({ hype }) => {
+    toast("It's hero time. Alien mode for 20 seconds · Esc to power down");
+    return hype((why) => {
+      if (why === "timeout") toast("The Omnitrix timed out. ↑↑↓↓←→←→BA to go again");
+    });
+  });
 }

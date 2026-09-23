@@ -79,10 +79,10 @@ const title = `${p.name}: case study | Abhyuday Tomar`;
     </header>
 
     {
-      p.visual === "lastmile" && (
+      (p.visual === "lastmile" || p.visual === "docpilot") && (
         <div class="hero-visual container-x">
           <div data-media>
-            <ProjectVisual visual="lastmile" />
+            <ProjectVisual visual={p.visual} wide />
           </div>
         </div>
       )

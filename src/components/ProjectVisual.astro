@@ -3,17 +3,23 @@ import { Image } from "astro:assets";
 import lastmileAdmin from "../assets/lastmile-admin.png";
 import lastmileTracking from "../assets/lastmile-tracking.png";
 import financeDashboard from "../assets/finance-dashboard.png";
-import CodeBlock from "./CodeBlock.astro";
+import docpilotLanding from "../assets/docpilot-landing.png";
+import docpilotLogin from "../assets/docpilot-login.png";
 import ConfusionMatrix from "./charts/ConfusionMatrix.astro";
 import Icon from "./Icon.astro";
-import { projects, type VisualKey } from "../data/projects";
+import type { VisualKey } from "../data/projects";
 
 interface Props {
   visual: VisualKey;
+  /** Full container width (case-study heroes) rather than half a card. */
+  wide?: boolean;
 }
 
-const { visual } = Astro.props;
-const rulesSample = projects.docpilot.caseStudy!.decisions[0].code!;
+const { visual, wide = false } = Astro.props;
+// Screenshots: the main shot and the small overlaid one.
+const mainWidths = wide ? [960, 1440, 1920, 2560] : [640, 960, 1280];
+const mainSizes = wide ? "(min-width: 1440px) 1320px, 92vw" : "(min-width: 1024px) 50vw, 92vw";
+const overlaySizes = wide ? "(min-width: 1024px) 34vw, 50vw" : "(min-width: 1024px) 20vw, 42vw";
 ---
 
 {
@@ -22,15 +28,15 @@ const rulesSample = projects.docpilot.caseStudy!.decisions[0].code!;
       <Image
         src={lastmileAdmin}
         alt="LastMile IQ admin console: order totals, revenue and the shipment feed"
-        widths={[640, 960, 1280]}
-        sizes="(min-width: 1024px) 50vw, 92vw"
+        widths={mainWidths}
+        sizes={mainSizes}
         class="shot main"
       />
       <Image
         src={lastmileTracking}
         alt="Public tracking page for an order, with its status timeline"
-        widths={[480, 720]}
-        sizes="(min-width: 1024px) 28vw, 60vw"
+        widths={wide ? [720, 1080, 1440] : [480, 720]}
+        sizes={wide ? "(min-width: 1024px) 50vw, 60vw" : "(min-width: 1024px) 28vw, 60vw"}
         class="shot overlay"
       />
     </div>
@@ -39,8 +45,21 @@ const rulesSample = projects.docpilot.caseStudy!.decisions[0].code!;
 
 {
   visual === "docpilot" && (
-    <div class="v-code">
-      <CodeBlock sample={rulesSample} bare class="code" />
+    <div class="v-lastmile v-docpilot">
+      <Image
+        src={docpilotLanding}
+        alt="DocPilot web app home page: AI-assisted clinical practice with live queueing and patient management"
+        widths={mainWidths}
+        sizes={mainSizes}
+        class="shot main"
+      />
+      <Image
+        src={docpilotLogin}
+        alt="DocPilot sign-in, where doctors and patients each pick their own portal"
+        widths={wide ? [480, 720, 1200] : [360, 540]}
+        sizes={overlaySizes}
+        class="shot overlay"
+      />
     </div>
   )
 }
@@ -116,15 +135,10 @@ const rulesSample = projects.docpilot.caseStudy!.decisions[0].code!;
     box-shadow: var(--shadow);
   }
 
-  .v-code {
-    position: relative;
-    max-height: 100%;
-    overflow: hidden;
-  }
-
-  .v-code :global(.code-block) {
-    font-size: clamp(0.75rem, 1vw, 0.875rem);
-    box-shadow: var(--shadow);
+  /* The sign-in form is portrait, so it sits narrower than LastMile's overlay. */
+  .v-docpilot :global(.overlay) {
+    width: 36%;
+    left: -4%;
   }
 
   .v-matrix {

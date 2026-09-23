@@ -168,8 +168,10 @@ async function ascii(footer: HTMLElement) {
     for (const c of cells) {
       const lit = c.lit > now;
       busy ||= lit;
-      // Dark theme: bright pixels get the heavy characters. Light theme: the opposite.
-      const t = colors.dark ? c.level : 1 - c.level;
+      // Dark theme: bright pixels get the heavy characters. Light theme: the
+      // opposite, lifted so the skin's midtones still get real characters
+      // rather than dots (otherwise only the dark shirt reads).
+      const t = colors.dark ? c.level : Math.pow(1 - c.level, 0.62);
       const char = RAMP[Math.round(t * (RAMP.length - 1))];
       const near = c.level - 0.5;
       const x = c.col * size + view.x * depth * near;
@@ -179,8 +181,9 @@ async function ascii(footer: HTMLElement) {
         ctx.fillStyle = colors.accent;
         ctx.fillRect(x, y, size, size);
       }
-      // Denser characters also print a little stronger, which adds depth.
-      ctx.globalAlpha = lit ? 1 : c.alpha * (0.55 + 0.45 * t);
+      // Dark theme: denser characters also print stronger, which adds depth.
+      // Light theme: the densest (the shirt) print softer, so the face leads.
+      ctx.globalAlpha = lit ? 1 : c.alpha * (colors.dark ? 0.55 + 0.45 * t : 0.95 - 0.35 * t);
       ctx.fillStyle = lit ? colors.onAccent : colors.ink;
       ctx.fillText(char, x + size / 2, y + size / 2);
     }
@@ -301,9 +304,11 @@ async function ascii(footer: HTMLElement) {
 
 function theme() {
   const s = getComputedStyle(document.documentElement);
+  const dark = s.colorScheme.includes("dark");
   return {
-    dark: s.colorScheme.includes("dark"),
-    ink: s.getPropertyValue("--fg-muted").trim() || "#888",
+    dark,
+    // Light theme uses the full text colour: grey glyphs on a pale ground lose the face.
+    ink: s.getPropertyValue(dark ? "--fg-muted" : "--fg").trim() || "#888",
     accent: s.getPropertyValue("--accent").trim() || "#ff5a1f",
     onAccent: s.getPropertyValue("--on-accent").trim() || "#121213",
   };

@@ -243,9 +243,15 @@ export function createHomelabScene(
   const applyColors = () => {
     for (const p of platforms.values()) {
       const active = p.id === (hovered ?? selected);
-      (p.plate.material as THREE.MeshLambertMaterial).color.copy(palette.plate);
-      (p.edges.material as THREE.LineBasicMaterial).color.copy(active ? palette.accent : palette.plateEdge);
+      // The server's own reachability check, if one of the Kumas reports it.
+      const host = status.find((s) => s.server === p.id && s.name === "Host");
+      const offline = !!host && !host.up;
+      const plateColor = (p.plate.material as THREE.MeshLambertMaterial).color.copy(palette.plate);
+      if (offline) plateColor.lerp(palette.accent, 0.35);
+      (p.edges.material as THREE.LineBasicMaterial).color.copy(active || offline ? palette.accent : palette.plateEdge);
       p.label.element.classList.toggle("is-active", active);
+      if (host) p.label.element.dataset.host = host.up ? "up" : "down";
+      else delete p.label.element.dataset.host;
       for (const b of p.blocks) {
         const match = status.find((s) => s.server === p.id && s.name.toLowerCase() === b.service);
         const color = !match ? palette.unknown : match.up ? palette.block : palette.accent;

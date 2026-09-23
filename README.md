@@ -6,7 +6,7 @@ homelab.
 
 **Stack:** Astro 7, Tailwind CSS 4, GSAP, Three.js, TypeScript. Hosted on
 Cloudflare Workers (static assets plus a small Worker for the API), with
-Workers KV, D1, Turnstile and Email Service.
+D1, Turnstile and Email Service.
 
 ## Layout
 
@@ -19,7 +19,7 @@ src/
   pages/         /, /cloud, /ai, /work/[slug], /status, 404
 worker/          API: /api/status and /api/uptime (homelab), /api/contact
 worker/migrations/  D1 schema for the uptime history
-homelab/         cron script that pushes live status from Uptime Kuma
+homelab/         cron script that pushes live status from Uptime Kuma (Jarvis and vault-server)
 scripts/         build and maintenance scripts (see below)
 ```
 
@@ -57,23 +57,28 @@ sending email.
 5. Supabase, for the archive of contact messages (optional, see below):
    `npx wrangler secret put SUPABASE_URL` and
    `npx wrangler secret put SUPABASE_SECRET_KEY`.
-6. D1, for the uptime history: `npx wrangler d1 create abhyudaytomar-uptime`,
+6. D1, for homelab status and its history: `npx wrangler d1 create abhyudaytomar-uptime`,
    put its id in `wrangler.jsonc`, then
    `npx wrangler d1 migrations apply abhyudaytomar-uptime --remote`
    (and `--local` for `npm run preview`).
-7. `npm run deploy`. The KV namespace and the custom domains are set up on the
-   first deploy.
+7. `npm run deploy`. The custom domains are set up on the first deploy.
 
-## Status page
+## Live status and the status page
 
-`/status` shows the live homelab status and 30 days of uptime per service. Each
-push to `POST /api/status` (every two minutes, from `homelab/`) also adds one
-check to that day's row for every service in D1 (`uptime_daily`, days in India
-time), plus a `reports` row counting the pushes, so a day when Jarvis was off
-shows as missing reports rather than downtime. `GET /api/uptime` returns the 30
-days and is cached at the edge for five minutes. At roughly 25 rows per push the
-writes stay well inside D1's free daily allowance; rows older than 400 days are
-dropped.
+Jarvis and vault-server each run Uptime Kuma and push their results to
+`POST /api/status` every two minutes (`homelab/README.md` has the setup). The
+Worker keeps the latest report from each in D1 (`latest_status`) and
+`GET /api/status` merges them, dropping a report that has gone stale while the
+other is fresh, so a dead Jarvis shows as offline (vault-server checks it)
+rather than as its last "all up". Every push also adds one check per service to
+that day's row in `uptime_daily` (days in India time), plus a row counting that
+server's pushes, so a server that stops reporting shows as missing reports
+rather than downtime.
+
+`/status` shows the live status and 30 days of uptime per check.
+`GET /api/uptime` returns the 30 days and is cached at the edge for five
+minutes; `/api/status` for 30 seconds. About 45,000 D1 rows are written a day,
+inside the free plan's 100,000; rows older than 400 days are dropped.
 
 ## Easter eggs
 

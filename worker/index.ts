@@ -3,14 +3,17 @@
  * only /api/* reaches this code.
  *
  *   GET  /api/status   latest homelab status, for the live map
- *   POST /api/status   the home server pushes a new status (bearer token)
+ *   POST /api/status   a homelab server pushes its Uptime Kuma results (bearer token)
  *   GET  /api/uptime   30 days of daily uptime per service, for /status
  *   POST /api/contact  contact form: Turnstile check, archive in Supabase, email to me
  */
 
-const STATUS_KEY = "homelab:status";
 const MAX_STATUS_BYTES = 64 * 1024;
 const MAX_CONTACT_BYTES = 16 * 1024;
+/** Reports older than this stop counting while a fresher one exists. */
+const STALE_S = 10 * 60;
+/** Pushes from before sources existed came from Jarvis. */
+const DEFAULT_SOURCE = "jarvis";
 
 interface ServiceStatus {
   name: string;
@@ -18,9 +21,10 @@ interface ServiceStatus {
   up: boolean;
 }
 
-interface StoredStatus {
-  updatedAt: string;
-  services: ServiceStatus[];
+interface StatusRow {
+  source: string;
+  updated_at: string;
+  services: string;
 }
 
 export default {
@@ -28,7 +32,7 @@ export default {
     const url = new URL(request.url);
     try {
       if (url.pathname === "/api/status") {
-        if (request.method === "GET" || request.method === "HEAD") return await getStatus(env);
+        if (request.method === "GET" || request.method === "HEAD") return await getStatus(request, env, ctx);
         if (request.method === "POST") return await putStatus(request, env, ctx);
         return methodNotAllowed("GET, POST");
       }
@@ -51,23 +55,70 @@ export default {
 
 // ---------------------------------------------------------------------------- status
 
-async function getStatus(env: Env): Promise<Response> {
-  const stored = await env.STATUS.get<StoredStatus>(STATUS_KEY, { type: "json", cacheTtl: 60 });
+/**
+ * Two servers push (Jarvis and vault-server), each with its own Uptime Kuma.
+ * The answer merges their latest reports. A report that has gone stale is left
+ * out while a fresh one exists, so if Jarvis dies its last "all up" doesn't
+ * linger, and vault-server's check on Jarvis says it's down. When every report
+ * is stale they're all shown, as a past report with its age.
+ */
+async function getStatus(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const cache = caches.default;
+  const key = new Request(new URL("/api/status", request.url).toString());
+  const hit = await cache.match(key);
+  if (hit) return hit;
+
+  const { results } = await env.UPTIME.prepare("SELECT source, updated_at, services FROM latest_status").all<StatusRow>();
+  const now = Date.now();
+  const reports = results
+    .map((r) => ({
+      source: r.source,
+      updatedAt: r.updated_at,
+      ageSeconds: Math.max(0, Math.round((now - Date.parse(r.updated_at)) / 1000)),
+      services: safeServices(r.services),
+    }))
+    .sort((a, b) => a.ageSeconds - b.ageSeconds);
+
   const headers = { "cache-control": "public, max-age=30" };
-  if (!stored) return json({ available: false }, 200, headers);
-  const up = stored.services.filter((s) => s.up).length;
-  const ageSeconds = Math.max(0, Math.round((Date.now() - Date.parse(stored.updatedAt)) / 1000));
-  return json(
-    {
-      available: true,
-      updatedAt: stored.updatedAt,
-      ageSeconds,
-      summary: { up, total: stored.services.length },
-      services: stored.services,
-    },
-    200,
-    headers,
-  );
+  let res: Response;
+  if (!reports.length) {
+    res = json({ available: false }, 200, headers);
+  } else {
+    const fresh = reports.filter((r) => r.ageSeconds <= STALE_S);
+    const used = fresh.length ? fresh : reports;
+    // Newest first, so when two servers report the same check the fresher wins.
+    const merged = new Map<string, ServiceStatus>();
+    for (const r of used) {
+      for (const s of r.services) {
+        const k = `${s.server}\u0000${s.name.toLowerCase()}`;
+        if (!merged.has(k)) merged.set(k, s);
+      }
+    }
+    const services = [...merged.values()];
+    res = json(
+      {
+        available: true,
+        updatedAt: used[0].updatedAt,
+        ageSeconds: used[0].ageSeconds,
+        summary: { up: services.filter((s) => s.up).length, total: services.length },
+        services,
+        sources: reports.map(({ source, ageSeconds }) => ({ source, ageSeconds })),
+      },
+      200,
+      headers,
+    );
+  }
+  ctx.waitUntil(cache.put(key, res.clone()));
+  return res;
+}
+
+function safeServices(raw: string): ServiceStatus[] {
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
 }
 
 async function putStatus(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -86,11 +137,18 @@ async function putStatus(request: Request, env: Env, ctx: ExecutionContext): Pro
 
   const services = parseServices(data);
   if (!services) return json({ ok: false, error: "invalid_payload" }, 422);
+  const rawSource = (data as { source?: unknown }).source ?? DEFAULT_SOURCE;
+  const source = typeof rawSource === "string" ? rawSource.trim().toLowerCase() : "";
+  if (!/^[a-z0-9-]{1,32}$/.test(source)) return json({ ok: false, error: "invalid_source" }, 422);
 
   // The Worker stamps the time itself rather than trusting the server's clock.
-  const stored: StoredStatus = { updatedAt: new Date().toISOString(), services };
-  await env.STATUS.put(STATUS_KEY, JSON.stringify(stored));
-  ctx.waitUntil(recordUptime(env, services));
+  await env.UPTIME.prepare(
+    `INSERT INTO latest_status (source, updated_at, services) VALUES (?1, ?2, ?3)
+     ON CONFLICT (source) DO UPDATE SET updated_at = excluded.updated_at, services = excluded.services`,
+  )
+    .bind(source, new Date().toISOString(), JSON.stringify(services))
+    .run();
+  ctx.waitUntil(recordUptime(env, source, services));
   return new Response(null, { status: 204 });
 }
 
@@ -98,7 +156,8 @@ async function putStatus(request: Request, env: Env, ctx: ExecutionContext): Pro
 
 const UPTIME_DAYS = 30;
 const KEEP_DAYS = 400;
-const REPORTS = { server: "_", name: "reports" };
+/** Rows with this server hold a count of pushes per source, named by the source. */
+const REPORTS_SERVER = "_";
 
 /** YYYY-MM-DD in India time, `offset` days from today. */
 function istDay(offset = 0): string {
@@ -110,7 +169,7 @@ function istDay(offset = 0): string {
  * push itself. The live status is already saved, so a D1 hiccup only costs a
  * sample of history.
  */
-async function recordUptime(env: Env, services: ServiceStatus[]): Promise<void> {
+async function recordUptime(env: Env, source: string, services: ServiceStatus[]): Promise<void> {
   const day = istDay();
   const upsert = env.UPTIME.prepare(
     `INSERT INTO uptime_daily (day, server, name, up, total) VALUES (?1, ?2, ?3, ?4, 1)
@@ -122,7 +181,7 @@ async function recordUptime(env: Env, services: ServiceStatus[]): Promise<void> 
   try {
     await env.UPTIME.batch([
       ...[...seen.values()].map((s) => upsert.bind(day, s.server, s.name, s.up ? 1 : 0)),
-      upsert.bind(day, REPORTS.server, REPORTS.name, 1),
+      upsert.bind(day, REPORTS_SERVER, source, 1),
       env.UPTIME.prepare("DELETE FROM uptime_daily WHERE day < ?1").bind(istDay(-KEEP_DAYS)),
     ]);
   } catch (err) {
@@ -140,8 +199,9 @@ interface UptimeRow {
 
 /**
  * The last 30 IST days, oldest first. Each service gets `up` and `total`
- * arrays aligned with `days` (0/0 where there's no data). Cached at the edge
- * for five minutes, since it only moves every couple of minutes anyway.
+ * arrays aligned with `days` (0/0 where there's no data), and `reports` has the
+ * number of pushes per day for each source. Cached at the edge for five
+ * minutes, since it only moves every couple of minutes anyway.
  */
 async function getUptime(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const cache = caches.default;
@@ -158,13 +218,13 @@ async function getUptime(request: Request, env: Env, ctx: ExecutionContext): Pro
 
   const index = new Map(days.map((d, i) => [d, i]));
   const blank = () => ({ up: new Array<number>(UPTIME_DAYS).fill(0), total: new Array<number>(UPTIME_DAYS).fill(0) });
-  const reports = blank();
+  const reports: Record<string, number[]> = {};
   const services = new Map<string, { server: string; name: string; up: number[]; total: number[] }>();
   for (const r of results) {
     const i = index.get(r.day);
     if (i === undefined) continue;
-    if (r.server === REPORTS.server && r.name === REPORTS.name) {
-      reports.total[i] = r.total;
+    if (r.server === REPORTS_SERVER) {
+      (reports[r.name] ??= new Array<number>(UPTIME_DAYS).fill(0))[i] = r.total;
       continue;
     }
     const k = `${r.server}\u0000${r.name}`;
@@ -175,7 +235,7 @@ async function getUptime(request: Request, env: Env, ctx: ExecutionContext): Pro
   }
 
   const res = json(
-    { days, reports: reports.total, services: [...services.values()], generatedAt: new Date().toISOString() },
+    { days, reports, services: [...services.values()], generatedAt: new Date().toISOString() },
     200,
     { "cache-control": "public, max-age=300" },
   );

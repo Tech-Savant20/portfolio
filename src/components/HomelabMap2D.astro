@@ -27,7 +27,11 @@ const { standalone = false } = Astro.props;
     servers.map((s) => (
       <article class:list={["server", `s-${s.id}`, { peer: s.peer }]} data-server={s.id} aria-labelledby={`srv-${s.id}`}>
         <header>
-          <h3 id={`srv-${s.id}`}>{s.name}</h3>
+          <h3 id={`srv-${s.id}`}>
+            {s.name}
+            {/* Filled in from the server's own host check, when there is one. */}
+            <span class="online" data-host-state hidden></span>
+          </h3>
           <span class="role">{s.role}</span>
         </header>
         <p class="host">{s.host}</p>
@@ -189,6 +193,42 @@ const { standalone = false } = Astro.props;
   .role {
     font-size: 0.8125rem;
     color: var(--fg-muted);
+  }
+
+  .online {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--fg-muted);
+    vertical-align: middle;
+  }
+
+  .online::before {
+    content: "";
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 999px;
+    background: var(--fg);
+  }
+
+  .online[hidden] {
+    display: none;
+  }
+
+  .server:global([data-host="down"]) {
+    border-color: var(--accent);
+  }
+
+  .server:global([data-host="down"]) .online {
+    color: var(--accent-ink);
+  }
+
+  .server:global([data-host="down"]) .online::before {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-wash);
   }
 
   .host {

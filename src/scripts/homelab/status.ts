@@ -10,7 +10,16 @@ export interface StatusPayload {
   ageSeconds?: number;
   summary?: { up: number; total: number };
   services?: ServiceStatus[];
+  /** Each server that pushes, and how old its latest report is. */
+  sources?: { source: string; ageSeconds: number }[];
 }
+
+/** The name the push script gives a server's own reachability check. */
+export const HOST = "Host";
+
+const SERVER_NAMES: Record<string, string> = { jarvis: "Jarvis", "vault-server": "vault-server", "oracle-1": "oracle-1" };
+export const serverName = (id: string) => SERVER_NAMES[id] ?? id;
+const label = (s: ServiceStatus) => (s.name === HOST ? serverName(s.server) : s.name);
 
 /** After this long without a push, the numbers are shown as a past report. */
 const STALE_AFTER_S = 10 * 60;
@@ -54,17 +63,28 @@ export function describe(p: StatusPayload): { state: StatusState; main: string; 
       sub: `${up} of ${total} monitored services were up then.`,
     };
   }
-  const down = (p.services ?? []).filter((s) => !s.up).map((s) => s.name);
+  const services = p.services ?? [];
+  const hostsDown = services.filter((s) => s.name === HOST && !s.up).map(label);
+  const down = services.filter((s) => !s.up && s.name !== HOST).map(label);
+  if (hostsDown.length) {
+    return {
+      state: "degraded",
+      main: `${hostsDown.join(" and ")} ${hostsDown.length === 1 ? "is" : "are"} offline`,
+      sub: `${up} of ${total} checks up${down.length ? `; also down: ${down.slice(0, 3).join(", ")}` : ""}. Updated ${ago(age)}.`,
+    };
+  }
   if (up < total) {
     return {
       state: "degraded",
-      main: `${up} of ${total} services up`,
+      main: `${up} of ${total} checks up`,
       sub: `Down: ${down.slice(0, 3).join(", ") || "unknown"}. Updated ${ago(age)}.`,
     };
   }
+  const hosts = services.filter((s) => s.name === HOST).length;
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
   return {
     state: "live",
-    main: `All ${total} monitored services up`,
+    main: hosts ? `All ${plural(hosts, "server")} and ${plural(total - hosts, "service")} up` : `All ${total} monitored services up`,
     sub: `Live from Uptime Kuma, updated ${ago(age)}.`,
   };
 }

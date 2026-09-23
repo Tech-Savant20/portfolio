@@ -203,8 +203,10 @@ export function initTerminal() {
           `${s.summary.up}/${s.summary.total} services up · last report ${age < 90 ? `${age}s` : `${Math.round(age / 60)} min`} ago`,
           s.summary.up === s.summary.total ? "ok" : "warn",
         );
-        const down = (s.services ?? []).filter((x) => !x.up);
-        down.forEach((x) => line(`  down: ${esc(x.name)} on ${esc(x.server)}`, "warn"));
+        const jarvis = (s.services ?? []).find((x) => x.server === "jarvis" && x.name === "Host");
+        if (jarvis) line(`  jarvis host: ${jarvis.up ? "reachable (checked by vault-server)" : "OFFLINE"}`, jarvis.up ? "ok" : "warn");
+        const down = (s.services ?? []).filter((x) => !x.up && !(x === jarvis));
+        down.forEach((x) => line(`  down: ${esc(x.name === "Host" ? `${x.server} host` : x.name)} on ${esc(x.server)}`, "warn"));
       } catch {
         line("no reply: the status API only runs on the live site.", "warn");
       }

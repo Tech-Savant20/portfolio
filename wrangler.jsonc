@@ -14,12 +14,10 @@
     "run_worker_first": ["/api/*"]
   },
 
-  // Latest homelab status, pushed by a cron job on the home server every 2 minutes
-  // (720 writes a day, inside the free plan's 1,000). Created on first deploy.
-  "kv_namespaces": [{ "binding": "STATUS" }],
-
-  // Daily uptime counts per service for /status, one row per service per IST
-  // day, bumped on every push. Schema in worker/migrations.
+  // Homelab status. Jarvis and vault-server each push their Uptime Kuma results
+  // every 2 minutes: the latest report per server (latest_status) and daily
+  // uptime counts per service for /status (uptime_daily, one row per service
+  // per IST day). Schema in worker/migrations.
   "d1_databases": [
     {
       "binding": "UPTIME",

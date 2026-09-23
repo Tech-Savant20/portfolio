@@ -331,6 +331,28 @@ const realServers = servers.filter((s) => !s.peer);
     color: var(--accent-ink);
   }
 
+  /* A dot for the server's own host check: filled when up, accent when down. */
+  .canvas-wrap :global(.label3d[data-host])::after {
+    content: "";
+    display: inline-block;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    margin-left: 0.4rem;
+    border-radius: 999px;
+    background: var(--fg);
+    vertical-align: 0.05em;
+  }
+
+  .canvas-wrap :global(.label3d[data-host="down"]) {
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .canvas-wrap :global(.label3d[data-host="down"])::after {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-wash);
+  }
+
   .picker {
     gap: 1rem;
     margin-top: 1rem;

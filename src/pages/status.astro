@@ -36,11 +36,11 @@ const names = Object.fromEntries(servers.map((s) => [s.id, s.name]));
       </div>
       <div>
         <p class="big" data-coverage>–</p>
-        <p class="cap">of expected reports received from home</p>
+        <p class="cap">of expected reports received from the homelab</p>
       </div>
       <div>
         <p class="big" data-count-services>–</p>
-        <p class="cap">services watched by Uptime Kuma</p>
+        <p class="cap">servers and services watched by Uptime Kuma</p>
       </div>
     </section>
 
@@ -56,9 +56,10 @@ const names = Object.fromEntries(servers.map((s) => [s.id, s.name]));
     </div>
 
     <p class="note">
-      Uptime Kuma on each server checks the others. A cron job on Jarvis pushes the results to this site every two
-      minutes, and the Worker adds each push to a daily tally in Cloudflare D1. Days are in India time. If Jarvis itself
-      is offline, nothing is reported, so that shows up as missing reports rather than downtime.
+      Uptime Kuma runs on Jarvis and on vault-server. Every two minutes a cron job on each pushes its results to this
+      site over plain HTTPS; nothing in the homelab is exposed. The Worker adds each push to a daily tally in
+      Cloudflare D1, with days in India time. Because vault-server checks Jarvis from outside, a dead Jarvis shows up as
+      down instead of going quiet; a server that stops reporting shows as missing reports rather than downtime.
     </p>
 
     <a class="btn btn-ghost" href="/work/jarvis-homelab" data-astro-prefetch>
@@ -83,11 +84,12 @@ const names = Object.fromEntries(servers.map((s) => [s.id, s.name]));
 
   interface Uptime {
     days: string[];
-    reports: number[];
+    /** Pushes per day, per server that pushes (jarvis, vault-server). */
+    reports: Record<string, number[]>;
     services: { server: string; name: string; up: number[]; total: number[] }[];
   }
 
-  /** The home server pushes every two minutes. */
+  /** Each pushing server sends a report every two minutes. */
   const PUSHES_PER_DAY = 720;
 
   const root = document.querySelector<HTMLElement>("[data-uptime]");
@@ -122,13 +124,14 @@ const names = Object.fromEntries(servers.map((s) => [s.id, s.name]));
       return r >= 0.995 ? "ok" : r >= 0.95 ? "minor" : "major";
     };
 
-    const bars = (up: number[], total: number[], days: string[], kind: "service" | "reports", today: string) =>
+    const bars = (up: number[], total: number[], days: string[], kind: "service" | "reports", today: string, first = -1) =>
       days
         .map((d, i) => {
           let cls: string;
           let tip: string;
           if (kind === "reports") {
-            const want = expected(d, today);
+            // A server's first day started whenever it was set up, so it counts as complete.
+            const want = i === first ? Math.max(1, total[i]) : expected(d, today);
             const got = total[i];
             cls = got ? level(Math.min(got, want), want) : "none";
             tip = got ? `${dayLabel(d)} · ${got} of ~${want} reports` : `${dayLabel(d)} · no reports`;
@@ -153,39 +156,56 @@ const names = Object.fromEntries(servers.map((s) => [s.id, s.name]));
       const today = u.days[u.days.length - 1];
       const allUp = sum(u.services.map((s) => sum(s.up)));
       const allTotal = sum(u.services.map((s) => sum(s.total)));
-      const firstIdx = u.reports.findIndex((n) => n > 0);
+      const sources = Object.entries(u.reports ?? {})
+        .map(([source, counts]) => {
+          const first = counts.findIndex((n) => n > 0);
+          const wanted =
+            first < 0 ? 0 : counts[first] + sum(u.days.slice(first + 1).map((d) => expected(d, today)));
+          return { source, counts, first, got: sum(counts), wanted };
+        })
+        .filter((s) => s.first >= 0)
+        .sort((a, b) => a.source.localeCompare(b.source));
+      const firstIdx = Math.min(...sources.map((s) => s.first));
 
       q("[data-count-services]").textContent = String(u.services.length || "–");
-      if (!allTotal || firstIdx < 0) {
-        groups.innerHTML = `<p class="empty">No reports from Jarvis yet. History starts with the first one, and the bars fill in day by day from there.</p>`;
+      if (!allTotal || !sources.length) {
+        groups.innerHTML = `<p class="empty">No reports from the homelab yet. History starts with the first one, and the bars fill in day by day from there.</p>`;
         return;
       }
       q("[data-overall]").textContent = pct(allUp / allTotal);
-      const wanted = sum(u.days.slice(firstIdx).map((d) => expected(d, today)));
-      q("[data-coverage]").textContent = pct(Math.min(1, sum(u.reports) / wanted));
+      q("[data-coverage]").textContent = pct(
+        Math.min(1, sum(sources.map((s) => s.got)) / sum(sources.map((s) => s.wanted))),
+      );
 
       const byServer = new Map<string, Uptime["services"]>();
       for (const s of u.services) byServer.set(s.server, [...(byServer.get(s.server) ?? []), s]);
 
       const since = firstIdx > 0 ? `<p class="since">Recording since ${dayLabel(u.days[firstIdx])}.</p>` : "";
-      const reportsRow = row(
-        "Reports from Jarvis",
-        pct(Math.min(1, sum(u.reports) / wanted)),
-        bars([], u.reports, u.days, "reports", today),
-        `${sum(u.reports)} reports received`,
-      );
+      const reportRows = sources
+        .map((s) =>
+          row(
+            `Reports from ${esc(names[s.source] ?? s.source)}`,
+            pct(Math.min(1, s.got / s.wanted)),
+            bars([], s.counts, u.days, "reports", today, s.first),
+            `${s.got} reports received`,
+          ),
+        )
+        .join("");
 
+      // The server's own reachability check comes first, then its services.
+      const isHost = (s: { name: string }) => s.name === "Host";
       groups.innerHTML =
         since +
-        `<section class="group"><h2>Pipeline</h2><ul>${reportsRow}</ul></section>` +
+        `<section class="group"><h2>Pipeline</h2><ul>${reportRows}</ul></section>` +
         [...byServer.entries()]
           .map(([server, list]) => {
             const rows = list
-              .sort((a, b) => a.name.localeCompare(b.name))
+              .sort((a, b) => Number(isHost(b)) - Number(isHost(a)) || a.name.localeCompare(b.name))
               .map((s) => {
                 const t = sum(s.total);
                 const figure = t ? pct(sum(s.up) / t) : "–";
-                return row(esc(s.name), figure, bars(s.up, s.total, u.days, "service", today), `${figure} up over 30 days`);
+                const label = isHost(s) ? "Server reachable" : esc(s.name);
+                return row(label, figure, bars(s.up, s.total, u.days, "service", today), `${figure} up over 30 days`);
               })
               .join("");
             return `<section class="group"><h2>${esc(names[server] ?? server)}</h2><ul>${rows}</ul></section>`;

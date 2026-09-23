@@ -1,58 +1,79 @@
 # Live homelab status
 
-The homelab section of the site shows live status from Uptime Kuma. Nothing on
-the homelab is exposed to the internet: Jarvis pushes a small JSON summary to
-the site's Worker every 2 minutes, and the Worker keeps the latest one in
-Workers KV. If Jarvis stops pushing, the site shows the last report and how old
-it is.
+The homelab section of the site and https://abhyudaytomar.com/status show live
+status from Uptime Kuma. Nothing in the homelab is exposed to the internet:
+Jarvis and vault-server each run Uptime Kuma, and each pushes a small JSON
+summary of its results to the site's Worker every 2 minutes over ordinary
+outbound HTTPS. The Worker never connects to the homelab, so Tailscale stays
+closed to the outside.
 
 ```
-Uptime Kuma (Jarvis, localhost:3001)
-  -> push-status.sh (cron, every 2 min)
-  -> POST https://abhyudaytomar.com/api/status   (bearer token)
-  -> Workers KV
-  -> GET /api/status  -> the map on the site
+Jarvis:        Uptime Kuma (services)   -> push-status.sh (cron, SOURCE=jarvis)       ┐
+vault-server:  Uptime Kuma (host checks)-> push-status.sh (cron, SOURCE=vault-server) ┤
+                                                                                      ↓
+                        POST https://abhyudaytomar.com/api/status   (bearer token)
+                        -> D1: latest report per server + daily uptime per check
+                        -> GET /api/status  (merged)  -> the map on the site
+                        -> GET /api/uptime  (30 days) -> /status
 ```
 
-Two minutes keeps the Worker at 720 KV writes a day, inside the free plan's
-1,000. Each push is also tallied per service per day in D1, which feeds the
-30-day bars on https://abhyudaytomar.com/status.
+The site merges the latest report from each server. A report older than 10
+minutes is dropped while the other server's report is fresh: so if Jarvis dies,
+its last "all up" doesn't linger, and vault-server's check on Jarvis shows it as
+offline.
 
-## Setup on Jarvis
+## What gets reported
+
+- **Service checks.** Each group on the Kuma status page is one server, named
+  `Jarvis`, `vault-server` or `oracle-1`, and a monitor's name is the service's
+  name on the site (Nextcloud, Pi-hole, Vaultwarden, ...). Media tools (Radarr,
+  Sonarr, Prowlarr, qBittorrent, Jellyseerr, FlareSolverr) are merged into one
+  "Media automation" entry before anything leaves the server.
+- **Host checks.** A monitor whose name starts with a server's name, such as
+  `Jarvis`, `Vault-server (host)` or `Oracle-1 (Minecraft)`, is reported as that
+  server's reachability ("Host"), whatever group it is in. The map shows these
+  as online/offline on each server.
+- Monitors with names the site doesn't know still count on /status; on the map
+  they simply don't light anything.
+
+## Setup
+
+Do steps 1, 3 and 4 on **both** Jarvis and vault-server.
 
 1. **Status page in Uptime Kuma.** Create a status page with the slug
-   `portfolio`. Add one group per server, named exactly `Jarvis`,
-   `vault-server` and `oracle-1`, and put each monitor in the group of the
-   server it checks. Monitor names should match the service names on the site
-   (Nextcloud, Pi-hole, Vaultwarden, ...) so the map can light up the right
-   blocks. Media tools (Radarr, Sonarr, Prowlarr, qBittorrent, Jellyseerr,
-   FlareSolverr) are merged into one "Media automation" entry before anything
-   leaves the server.
+   `portfolio` and publish it. Add the monitors you want on the site, grouped
+   as described above.
 
-2. **Token.** Generate a random token and store it as a Worker secret:
+2. **Token** (once, on your PC in this repo). The same token is used by both
+   servers:
 
-   ```sh
-   openssl rand -hex 32            # copy the output
-   npx wrangler secret put STATUS_TOKEN
+   ```powershell
+   $tok = -join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Max 256) })
+   $tok | Set-Content -NoNewline homelab/.status-token
+   $tok | npx wrangler secret put STATUS_TOKEN
    ```
 
-3. **Config file** (readable only by root):
+3. **Script and config file** (`curl` and `jq` needed: `sudo apt install -y curl jq`):
 
    ```sh
+   sudo curl -fsSL https://raw.githubusercontent.com/Tech-Savant20/portfolio/main/homelab/push-status.sh \
+     -o /usr/local/bin/portfolio-push-status
+   sudo chmod 755 /usr/local/bin/portfolio-push-status
    sudo install -m 600 /dev/null /etc/portfolio-status.env
    sudo nano /etc/portfolio-status.env
    ```
 
    ```
-   STATUS_TOKEN=<the same token>
+   STATUS_TOKEN=<the token>
+   SOURCE=jarvis            # vault-server on vault-server
    KUMA_SLUG=portfolio
+   # KUMA_URL=http://127.0.0.1:3001   only if Kuma isn't on port 3001 of this machine
    ```
 
-4. **Script and cron.** `jq` and `curl` are needed (`sudo apt install jq curl`).
+4. **Test, then cron:**
 
    ```sh
-   sudo install -m 755 push-status.sh /usr/local/bin/portfolio-push-status
-   sudo portfolio-push-status && echo ok     # one manual run first
+   sudo portfolio-push-status && echo ok
    sudo crontab -e
    ```
 
@@ -60,5 +81,15 @@ Two minutes keeps the Worker at 720 KV writes a day, inside the free plan's
    */2 * * * * /usr/local/bin/portfolio-push-status >/dev/null 2>&1
    ```
 
+   A 401 means the token doesn't match the Worker secret; a 422 means the status
+   page has no monitors with heartbeats yet.
+
 5. **Check it.** `curl -s https://abhyudaytomar.com/api/status` should return
-   `"available": true` and the list of services.
+   `"available": true`, the merged checks, and both servers under `sources`.
+   The answer is cached for 30 seconds.
+
+## Free-plan budget
+
+Two servers every 2 minutes is 1,440 pushes a day. Each push writes one row of
+latest status and one row per check to D1 (about 30 rows), roughly 45,000 rows
+a day against the free plan's 100,000.

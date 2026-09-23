@@ -1,4 +1,4 @@
-import { describe, fetchStatus, type StatusPayload } from "./status";
+import { HOST, describe, fetchStatus, type StatusPayload } from "./status";
 import type { Server } from "../../data/homelab";
 import type { HomelabScene } from "./scene";
 
@@ -48,6 +48,14 @@ export function initHomelab() {
     // Dots on the 2D map.
     section.querySelectorAll<HTMLElement>("[data-server]").forEach((card) => {
       const server = card.dataset.server ?? "";
+      const host = serviceState(server, HOST);
+      const badge = card.querySelector<HTMLElement>("[data-host-state]");
+      if (host === "unknown") delete card.dataset.host;
+      else card.dataset.host = host;
+      if (badge) {
+        badge.hidden = host === "unknown";
+        badge.textContent = host === "up" ? "online" : "offline";
+      }
       card.querySelectorAll<HTMLElement>("[data-service]").forEach((li) => {
         const state = serviceState(server, li.dataset.service ?? "");
         if (state === "unknown") delete li.dataset.state;
@@ -78,7 +86,9 @@ export function initHomelab() {
     const node = template.content.cloneNode(true) as DocumentFragment;
     node.querySelector("[data-d-name]")!.textContent = s.name;
     node.querySelector("[data-d-role]")!.textContent = s.role;
-    node.querySelector("[data-d-host]")!.textContent = s.host;
+    const host = serviceState(s.id, HOST);
+    node.querySelector("[data-d-host]")!.textContent =
+      s.host + (host === "unknown" ? "" : host === "up" ? " · online" : " · offline");
     const specs = node.querySelector("[data-d-specs]")!;
     s.specs.forEach((spec) => {
       const li = document.createElement("li");

@@ -29,12 +29,16 @@ if (token) {
     { name: "Vaultwarden", server: "vault-server", up: true },
     { name: "Crafty Controller", server: "oracle-1", up: false },
   ];
-  r = await post("/api/status", { services }, { authorization: `Bearer ${token}` });
+  r = await post("/api/status", { source: "smoke!", services }, { authorization: `Bearer ${token}` });
+  check("invalid source name is rejected", r.status === 422, r.status);
+  // Pushed as "jarvis", like the real cron job; the answer merges every fresh
+  // source and is cached for 30 seconds, so only its shape is checked here.
+  r = await post("/api/status", { source: "jarvis", services }, { authorization: `Bearer ${token}` });
   check("valid status push is stored", r.status === 204, r.status);
   r = await req("/api/status");
   const s = await r.json();
-  check("status reads back", s.available === true && s.summary?.up === 3 && s.summary?.total === 4, JSON.stringify(s.summary));
-  check("status has an age", typeof s.ageSeconds === "number" && s.ageSeconds < 60, s.ageSeconds);
+  check("status reads back", s.available === true && Array.isArray(s.services) && Array.isArray(s.sources), JSON.stringify(s.summary));
+  check("status has an age", typeof s.ageSeconds === "number", s.ageSeconds);
 }
 r = await req("/api/nope");
 check("unknown API route is a JSON 404", r.status === 404 && (r.headers.get("content-type") ?? "").includes("json"), r.status);

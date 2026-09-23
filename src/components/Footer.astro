@@ -6,7 +6,7 @@ import Icon from "./Icon.astro";
 
 const year = new Date().getFullYear();
 // Small enough to sample one pixel per character cell, and it keeps the cut-out's alpha.
-const ascii = await getImage({ src: portrait, width: 160, format: "webp" });
+const ascii = await getImage({ src: portrait, width: 312, format: "webp" });
 ---
 
 <footer class="footer" data-footer>
@@ -81,7 +81,7 @@ const ascii = await getImage({ src: portrait, width: 160, format: "webp" });
 
   .inner {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(12rem, 24vw, 21rem);
+    grid-template-columns: minmax(0, 1fr) clamp(13rem, 27vw, 25rem);
     grid-template-areas:
       "cols art"
       "name art"

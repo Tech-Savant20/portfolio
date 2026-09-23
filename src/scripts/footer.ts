@@ -11,9 +11,12 @@ gsap.registerPlugin(ScrollTrigger, SplitText);
  * the name and columns rising once the footer comes out.
  */
 
-/** Sparse to dense. Which end a cell takes depends on the theme. */
-const RAMP = " .:-=+*#%@";
-const COLS = 56;
+/** Sparse to dense. Which end a cell takes depends on the theme. No space:
+ *  every cell inside the cut-out prints something, so the outline stays whole. */
+const RAMP = ".:-=+*#%@";
+const COLS = 78;
+/** Share of the rows at the bottom that fade out, so the photo's crop line dissolves. */
+const FADE_ROWS = 0.24;
 /** Below this the source pixel is outside the cut-out portrait. */
 const ALPHA_FLOOR = 40;
 const LIT_MS = 320;
@@ -24,8 +27,10 @@ const REACH = 5;
 interface Cell {
   col: number;
   row: number;
-  /** 0 (black) to 1 (white) in the source image. */
+  /** 0 (darkest in the portrait) to 1 (brightest), after contrast shaping. */
   level: number;
+  /** Opacity: lower at the soft edges and across the bottom fade. */
+  alpha: number;
   /** Timestamp this cell stops being lit. */
   lit: number;
 }
@@ -64,14 +69,67 @@ async function ascii(footer: HTMLElement) {
   sctx.drawImage(img, 0, 0, COLS, rows);
   const { data } = sctx.getImageData(0, 0, COLS, rows);
 
+  // Luminance per cell, NaN outside the cut-out.
+  const lum = new Float32Array(COLS * rows).fill(NaN);
+  for (let i = 0; i < COLS * rows; i++) {
+    const o = i * 4;
+    if (data[o + 3] >= ALPHA_FLOOR) lum[i] = (data[o] * 0.299 + data[o + 1] * 0.587 + data[o + 2] * 0.114) / 255;
+  }
+  const inside = [...lum].filter((v) => !Number.isNaN(v)).sort((a, b) => a - b);
+  if (!inside.length) return;
+
+  // The photo is mostly dark shirt and mid-tone skin, which uses only a few
+  // characters of the ramp. Rank each cell among the others (histogram
+  // equalisation) so the whole ramp gets used, then sharpen against the
+  // neighbours so the eyes, brows and moustache read at this size.
+  const rank = (v: number) => {
+    let lo = 0;
+    let hi = inside.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (inside[mid] < v) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo / (inside.length - 1 || 1);
+  };
+  const lowV = inside[Math.floor(inside.length * 0.02)];
+  const highV = inside[Math.floor(inside.length * 0.98)];
+  const shaped = new Float32Array(COLS * rows).fill(NaN);
+  for (let i = 0; i < lum.length; i++) {
+    const v = lum[i];
+    if (Number.isNaN(v)) continue;
+    const stretched = Math.min(1, Math.max(0, (v - lowV) / (highV - lowV || 1)));
+    shaped[i] = 0.6 * rank(v) + 0.4 * stretched;
+  }
+
   const cells: Cell[] = [];
   const at = new Map<string, Cell>();
+  const fadeFrom = rows * (1 - FADE_ROWS);
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < COLS; col++) {
-      const o = (row * COLS + col) * 4;
-      if (data[o + 3] < ALPHA_FLOOR) continue;
-      const level = (data[o] * 0.299 + data[o + 1] * 0.587 + data[o + 2] * 0.114) / 255;
-      const cell: Cell = { col, row, level, lit: 0 };
+      const i = row * COLS + col;
+      const v = shaped[i];
+      if (Number.isNaN(v)) continue;
+      let sum = 0;
+      let n = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const x = col + dx;
+          const y = row + dy;
+          if (x < 0 || y < 0 || x >= COLS || y >= rows) continue;
+          const w = shaped[y * COLS + x];
+          if (Number.isNaN(w)) continue;
+          sum += w;
+          n++;
+        }
+      }
+      // Stray specks along the cut-out's edge have almost no neighbours.
+      if (n < 4) continue;
+      const level = Math.min(1, Math.max(0, v + 0.9 * (v - sum / n)));
+      const edge = Math.min(1, data[i * 4 + 3] / 200);
+      const fade = row < fadeFrom ? 1 : Math.max(0, 1 - (row - fadeFrom) / (rows - fadeFrom)) ** 1.4;
+      if (fade < 0.04) continue;
+      const cell: Cell = { col, row, level, alpha: edge * fade, lit: 0 };
       cells.push(cell);
       at.set(`${col},${row}`, cell);
     }
@@ -90,7 +148,7 @@ async function ascii(footer: HTMLElement) {
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(size * rows * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.font = `${(size * 1.2).toFixed(2)}px "Geist Mono Variable", ui-monospace, monospace`;
+    ctx.font = `600 ${(size * 1.35).toFixed(2)}px "Geist Mono Variable", ui-monospace, monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     return true;
@@ -110,12 +168,16 @@ async function ascii(footer: HTMLElement) {
       const x = c.col * size;
       const y = c.row * size;
       if (lit) {
+        ctx.globalAlpha = 1;
         ctx.fillStyle = colors.accent;
         ctx.fillRect(x, y, size, size);
       }
+      // Denser characters also print a little stronger, which adds depth.
+      ctx.globalAlpha = lit ? 1 : c.alpha * (0.55 + 0.45 * t);
       ctx.fillStyle = lit ? colors.onAccent : colors.ink;
       ctx.fillText(char, x + size / 2, y + size / 2);
     }
+    ctx.globalAlpha = 1;
     return busy;
   };
 

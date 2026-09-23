@@ -1,4 +1,4 @@
-# abhyudaytomar.com
+﻿# abhyudaytomar.com
 
 My portfolio. One site with three views (backend, cloud and AI/ML) that reorder
 the same work for whoever is reading, four case studies, and a live 3D map of my
@@ -82,9 +82,10 @@ inside the free plan's 100,000; rows older than 400 days are dropped.
 
 ## Trail and llms.txt
 
-On desktop, a dotted S-shaped trail (`ScrollPath.astro`, `src/scripts/scroll-path.ts`)
-weaves down the home page from margin to margin, one bend per section, built
-from the page's own layout. It fills in with the accent as you scroll and an orb
+On desktop, a dotted trail (`ScrollPath.astro`, `src/scripts/scroll-path.ts`)
+runs down the home page's side margin and swings to the other margin in the
+empty band between sections, so it never crosses a card; it's built from the
+page's own layout. It fills in with the accent as you scroll and an orb
 rides its tip, a little below the middle of the screen.
 
 `/llms.txt` (`src/pages/llms.txt.ts`) is a plain-text summary of the site for

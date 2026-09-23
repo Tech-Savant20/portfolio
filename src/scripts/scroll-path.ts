@@ -5,8 +5,8 @@ gsap.registerPlugin(ScrollTrigger);
 
 /**
  * The trail in ScrollPath.astro. The path is built from the page's own layout:
- * it starts under the hero, bends to the other side at the top of each section
- * and ends at the bottom of main, staying in the side margins at every bend.
+ * it starts under the hero, runs down a side margin, swings to the other margin
+ * in the empty band between two sections, and ends at the bottom of main.
  * The orb is placed by height, not by distance along the path, so it always
  * sits a little below the middle of the screen.
  */
@@ -66,26 +66,43 @@ export function initScrollPath() {
       xR = Math.min(W - 14, W - (W - contentR) / 2);
     }
 
-    const hero = main.querySelector<HTMLElement>("[data-hero]");
-    startY = hero ? hero.getBoundingClientRect().bottom + scrollY - mainTop + 24 : 80;
+    // Start under whatever sits between the hero and the first section (the
+    // full-width marquee), since that runs edge to edge.
+    const first = main.querySelector<HTMLElement>("[data-section]");
+    const lead = first?.previousElementSibling ?? main.querySelector("[data-hero]");
+    startY = lead ? lead.getBoundingClientRect().bottom + scrollY - mainTop + 24 : 80;
     endY = H - 48;
-    const ys = [startY];
-    main.querySelectorAll<HTMLElement>("[data-section]").forEach((s) => {
-      const y = s.getBoundingClientRect().top + scrollY - mainTop + 40;
-      if (y > ys[ys.length - 1] + 160 && y < endY - 160) ys.push(y);
-    });
-    ys.push(endY);
 
-    // An S per section: vertical tangents at each bend keep the height rising
-    // steadily, so the orb can be placed by height.
-    const pts = ys.map((y, i) => ({ x: i % 2 === 0 ? xR : xL, y }));
-    let d = `M${pts[0].x},${pts[0].y}`;
-    for (let i = 1; i < pts.length; i++) {
-      const a = pts[i - 1];
-      const b = pts[i];
-      const k = (b.y - a.y) * 0.55;
-      d += ` C${a.x},${a.y + k} ${b.x},${b.y - k} ${b.x},${b.y}`;
+    // Where the trail may cross the page: the empty band between two sections
+    // (the last one's bottom padding and the next one's top padding). Inside a
+    // section it runs straight down the margin, so it never crosses a card or
+    // a line of text, and neither does the orb above it.
+    const gaps: [number, number][] = [];
+    main.querySelectorAll<HTMLElement>("[data-section]").forEach((s) => {
+      const top = s.getBoundingClientRect().top + scrollY - mainTop;
+      const prev = s.previousElementSibling as HTMLElement | null;
+      const above = prev?.matches(".section") ? parseFloat(getComputedStyle(prev).paddingBottom) : 0;
+      const below = parseFloat(getComputedStyle(s).paddingTop);
+      const g0 = top - above + 12;
+      const g1 = top + below - 12;
+      const last = gaps.length ? gaps[gaps.length - 1][1] : startY;
+      if (g1 - g0 > 60 && g0 > last + 40 && g1 < endY - 40) gaps.push([g0, g1]);
+    });
+
+    // Down the margin, across in each gap, down the other margin. Vertical
+    // tangents keep the height always rising, so the orb can be placed by height.
+    let x = xR;
+    const pts = [{ x, y: startY }];
+    let d = `M${x},${startY}`;
+    for (const [g0, g1] of gaps) {
+      const to = x === xR ? xL : xR;
+      const k = (g1 - g0) * 0.5;
+      d += ` L${x},${g0} C${x},${g0 + k} ${to},${g1 - k} ${to},${g1}`;
+      x = to;
+      pts.push({ x, y: g1 });
     }
+    d += ` L${x},${endY}`;
+    pts.push({ x, y: endY });
     base.setAttribute("d", d);
     lit.setAttribute("d", d);
 

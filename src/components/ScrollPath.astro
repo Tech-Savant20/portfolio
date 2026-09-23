@@ -1,9 +1,10 @@
 ---
 /**
- * A dotted S-shaped trail that weaves from side to side down the home page,
- * one bend per section. It fills in with the accent colour as you scroll, and
- * a glowing orb rides its tip. Desktop with a mouse only, and not with reduced
- * motion; the geometry is measured from the page in scroll-path.ts.
+ * A dotted trail down the home page: it runs along one side margin through a
+ * section and swings across to the other side in the gap before the next, so
+ * it never crosses the content. It fills in with the accent colour as you
+ * scroll, and a glowing orb rides its tip. Desktop with a mouse only, and not
+ * with reduced motion; the geometry is measured from the page in scroll-path.ts.
  */
 ---
 
@@ -18,9 +19,9 @@
 <div class="trail orb-layer" data-scroll-orb aria-hidden="true" hidden>
   <svg class="svg" preserveAspectRatio="none">
     <g class="orb" data-orb>
-      <circle class="halo" r="15"></circle>
-      <circle class="core" r="5.5"></circle>
-      <path class="nose" d="M7 -3.5 L13 0 L7 3.5 Z"></path>
+      <circle class="halo" r="12"></circle>
+      <circle class="core" r="5"></circle>
+      <path class="nose" d="M6.5 -3 L11.5 0 L6.5 3 Z"></path>
     </g>
   </svg>
 </div>

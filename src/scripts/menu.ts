@@ -11,6 +11,7 @@ export function initMenu() {
   const nav = document.querySelector<HTMLElement>("[data-nav]");
   const hero = document.querySelector<HTMLElement>("[data-hero]");
   const button = document.querySelector<HTMLButtonElement>("[data-menu-button]");
+  const floatTheme = document.querySelector<HTMLButtonElement>("[data-float-theme]");
   const menu = document.querySelector<HTMLElement>("[data-menu]");
   const panel = menu?.querySelector<HTMLElement>("[data-menu-panel]");
   const scrim = menu?.querySelector<HTMLElement>(".scrim");
@@ -28,11 +29,13 @@ export function initMenu() {
         nav.classList.toggle("on-hero", over);
         nav.classList.toggle("is-away", !over);
         button.classList.toggle("is-shown", !over);
+        floatTheme?.classList.toggle("is-shown", !over);
       },
       { rootMargin: `-${navH}px 0px 0px 0px` },
     ).observe(hero);
   } else {
     button.classList.add("is-shown");
+    floatTheme?.classList.add("is-shown");
   }
 
   // ---- open and close ----
@@ -80,7 +83,8 @@ export function initMenu() {
         .fromTo(curve, { attr: { d: BULGE } }, { attr: { d: FLAT }, duration: 0.8, ease: "power3.inOut" }, 0)
         .fromTo(links, { x: 60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.7, ease: "power3.out", stagger: 0.04 }, 0.25);
     }
-    panel.querySelector<HTMLElement>("[data-menu-link]")?.focus({ preventScroll: true });
+    // Focus the panel itself: Tab goes on to the links, and no link looks picked.
+    panel.focus({ preventScroll: true });
   };
 
   const hide = (returnFocus = true) => {
@@ -150,7 +154,17 @@ export function initMenu() {
     }),
   );
 
-  // ---- theme: the nav's toggle does the work, with its reveal growing from here ----
+  // ---- theme: the nav's toggle does the work, with its reveal growing from the
+  //      button that was pressed (in the panel, or the one beside the menu button) ----
+  const switchTheme = (from: HTMLElement) => {
+    const toggle = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
+    if (!toggle) return;
+    const r = from.getBoundingClientRect();
+    toggle.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }),
+    );
+  };
+  floatTheme?.addEventListener("click", () => switchTheme(floatTheme));
   const themeButton = panel.querySelector<HTMLButtonElement>("[data-menu-theme]");
   const themeLabel = panel.querySelector<HTMLElement>("[data-menu-theme-label]");
   const syncTheme = () => {
@@ -158,12 +172,7 @@ export function initMenu() {
     if (themeLabel) themeLabel.textContent = dark ? "Switch to light" : "Switch to dark";
   };
   themeButton?.addEventListener("click", () => {
-    const toggle = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
-    if (!toggle) return;
-    const r = themeButton.getBoundingClientRect();
-    toggle.dispatchEvent(
-      new MouseEvent("click", { bubbles: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }),
-    );
+    switchTheme(themeButton);
     requestAnimationFrame(syncTheme);
     addEventListener("themechange", syncTheme, { once: true });
   });

@@ -26,21 +26,24 @@ const links = [
 ---
 
 {/* Floats in at the top right once the hero has scrolled away. */}
-<button
-  type="button"
-  class="menu-btn"
-  data-menu-button
-  data-magnetic
-  aria-expanded="false"
-  aria-controls="site-menu"
-  aria-label="Open menu"
->
-  <span class="bars" aria-hidden="true"><span></span><span></span></span>
+{/* The button scales in and out; the face inside it follows the pointer. They're
+    separate elements because the magnetic pull writes an inline transform,
+    which would otherwise override the scale and pin the button on screen. */}
+<button type="button" class="menu-btn" data-menu-button aria-expanded="false" aria-controls="site-menu" aria-label="Open menu">
+  <span class="menu-face" data-magnetic>
+    <span class="bars" aria-hidden="true"><span></span><span></span></span>
+  </span>
+</button>
+
+{/* The theme switch rides along with the menu button, so it never goes away with the bar. */}
+<button type="button" class="float-theme" data-float-theme aria-label="Switch colour theme">
+  <Icon name="sun" size="1.2rem" class="sun" />
+  <Icon name="moon" size="1.2rem" class="moon" />
 </button>
 
 <div class="menu" id="site-menu" data-menu hidden>
   <div class="scrim" data-menu-close aria-hidden="true"></div>
-  <div class="panel" role="dialog" aria-modal="true" aria-label="Menu" data-menu-panel>
+  <div class="panel" role="dialog" aria-modal="true" aria-label="Menu" tabindex="-1" data-menu-panel>
     {/* The curved left edge; it straightens as the panel settles. */}
     <svg class="curve" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       <path data-menu-curve d="M100 0 Q-100 50 100 100 Z"></path>
@@ -125,15 +128,13 @@ const links = [
     z-index: calc(var(--z-nav) + 2);
     top: calc(var(--nav-h) / 2 - 2rem + 0.5rem);
     right: var(--gutter);
-    display: grid;
-    place-items: center;
     width: 4rem;
     height: 4rem;
+    padding: 0;
     border: 0;
     border-radius: 999px;
-    background: #1c1d20;
+    background: none;
     color: #fff;
-    box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.5);
     transform: scale(0);
     transition: transform 0.45s var(--ease-out);
   }
@@ -141,6 +142,82 @@ const links = [
   .menu-btn:global(.is-shown),
   :global(html.menu-open) .menu-btn {
     transform: scale(1);
+  }
+
+  .menu-face {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 999px;
+    background: #1c1d20;
+    box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.5);
+  }
+
+  .float-theme {
+    position: fixed;
+    z-index: calc(var(--z-nav) + 2);
+    top: calc(var(--nav-h) / 2 - 2rem + 0.5rem + 0.5rem);
+    right: calc(var(--gutter) + 4rem + 0.75rem);
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border: 0;
+    border-radius: 999px;
+    background: #1c1d20;
+    color: #fff;
+    box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.5);
+    transform: scale(0);
+    transition: transform 0.45s var(--ease-out) 0.05s;
+  }
+
+  .float-theme:global(.is-shown) {
+    transform: scale(1);
+  }
+
+  /* The open menu has its own theme button. */
+  :global(html.menu-open) .float-theme {
+    transform: scale(0);
+  }
+
+  .float-theme:focus-visible {
+    outline-offset: 4px;
+  }
+
+  .float-theme :global(svg) {
+    grid-area: 1 / 1;
+    transition:
+      transform 0.6s var(--ease-out),
+      opacity 0.3s ease;
+  }
+
+  /* The icon of the theme it would switch to, like the bar's toggle. */
+  .float-theme :global(.sun) {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+  }
+
+  :global(:root[data-theme="dark"]) .float-theme :global(.sun) {
+    opacity: 1;
+    transform: none;
+  }
+
+  :global(:root[data-theme="dark"]) .float-theme :global(.moon) {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.6);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .float-theme :global(.sun) {
+      opacity: 1;
+      transform: none;
+    }
+
+    :global(:root:not([data-theme="light"])) .float-theme :global(.moon) {
+      opacity: 0;
+      transform: rotate(90deg) scale(0.6);
+    }
   }
 
   .menu-btn:focus-visible {
@@ -190,6 +267,10 @@ const links = [
     background: #1c1d20;
     color: #f2f2ef;
     transform: translateX(calc(100% + 100px));
+  }
+
+  .panel:focus {
+    outline: none;
   }
 
   .curve {
@@ -318,6 +399,13 @@ const links = [
       width: 3.5rem;
       height: 3.5rem;
       top: 0.75rem;
+    }
+
+    .float-theme {
+      width: 2.75rem;
+      height: 2.75rem;
+      top: 1.125rem;
+      right: calc(var(--gutter) + 3.5rem + 0.625rem);
     }
 
     .panel {

@@ -49,6 +49,9 @@ export function showCount() {
     el.textContent = `${n} / ${TOTAL} secrets found`;
     el.classList.toggle("has-found", n > 0);
   });
+  document.querySelectorAll<HTMLElement>("[data-secret-segs]").forEach((g) =>
+    [...g.children].forEach((s, i) => s.classList.toggle("on", i < n)),
+  );
 }
 
 let toastEl: HTMLElement | null = null;

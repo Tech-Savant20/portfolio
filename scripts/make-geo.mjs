@@ -1,5 +1,7 @@
-// Builds public/journey/geo.json for the journey section: land as dots for the
-// globe and for a close-up map of India, with India's boundary and its states.
+// Builds public/journey/geo.json for the journey section: a dot map of India
+// and its neighbours with India's boundary and its states, and the boundary
+// again as rings of longitude/latitude for the globe (the globe's imagery is
+// scripts/make-earth.mjs).
 //
 // Sources:
 // - Land: Natural Earth land polygons (public domain), via the world-atlas
@@ -19,8 +21,7 @@ const INDIA = "https://cdn.jsdelivr.net/gh/datameet/maps@master/Country/india-co
 const STATES = "https://raw.githubusercontent.com/datameet/maps/master/States/Admin2.shp";
 const OUT = "public/journey/geo.json";
 
-/** The globe: one dot per GLOBE_STEP degrees of land. */
-const GLOBE_STEP = 2;
+
 /** The close-up: the subcontinent at a finer grid (must match Journey.astro). */
 const REGION = { west: 66, east: 99, south: 5.5, north: 37.5, step: 0.45 };
 
@@ -108,26 +109,6 @@ for (let o = 100; o < shp.byteLength; ) {
   o = c + len;
 }
 
-// ---- the globe: an even-ish spread, fewer dots toward the poles, and a finer
-//      patch around the subcontinent, where the globe ends up zoomed in.
-//      Dots inside India are kept apart so the globe can pick India out. ----
-const FINE = { west: 58, east: 104, south: 2, north: 42, step: 0.9 };
-const inFine = (lon, lat) => lon >= FINE.west && lon <= FINE.east && lat >= FINE.south && lat <= FINE.north;
-const globe = [];
-const globeIndia = [];
-const round = (v) => Math.round(v * 10) / 10;
-const addGlobe = (lon, lat) => {
-  if (inIndia(lon, lat)) globeIndia.push(round(lon), round(lat));
-  else if (onLand(lon, lat)) globe.push(round(lon), round(lat));
-};
-for (let lat = -58; lat <= 82; lat += GLOBE_STEP) {
-  const step = GLOBE_STEP / Math.max(0.25, Math.cos((lat * Math.PI) / 180));
-  for (let lon = -180; lon < 180; lon += step) if (!inFine(lon, lat)) addGlobe(lon, lat);
-}
-for (let lat = FINE.south; lat <= FINE.north; lat += FINE.step) {
-  for (let lon = FINE.west; lon <= FINE.east; lon += FINE.step / Math.cos((lat * Math.PI) / 180)) addGlobe(lon, lat);
-}
-
 // ---- the close-up: grid cells as column/row indices, India's apart ----
 const cols = Math.round((REGION.east - REGION.west) / REGION.step);
 const rows = Math.round((REGION.north - REGION.south) / REGION.step);
@@ -204,17 +185,34 @@ function toPath(rings, tol, dot) {
 }
 
 const border = toPath(indiaPolys.flatMap((p) => p.rings), 0.08, 0.35);
+
+// For the globe: the same boundary in degrees, simplified, without the islands
+// too small to see from orbit.
+const globeBorder = [];
+for (const ring of indiaPolys.flatMap((p) => p.rings)) {
+  let w = 180, e = -180, s = 90, n = -90;
+  for (const [x, y] of ring) {
+    w = Math.min(w, x); e = Math.max(e, x); s = Math.min(s, y); n = Math.max(n, y);
+  }
+  if (e - w < 0.6 && n - s < 0.6) continue;
+  let far = 0;
+  for (let i = 1, best = 0; i < ring.length; i++) {
+    const d = Math.hypot(ring[i][0] - ring[0][0], ring[i][1] - ring[0][1]);
+    if (d > best) (best = d), (far = i);
+  }
+  const pts = [...simplify(ring.slice(0, far + 1), 0.04), ...simplify(ring.slice(far), 0.04).slice(1)];
+  if (pts.length >= 4) globeBorder.push(pts.flatMap(([x, y]) => [Math.round(x * 100) / 100, Math.round(y * 100) / 100]));
+}
 const states = toPath(stateRings, 0.12, 0.6);
 
 await mkdir("public/journey", { recursive: true });
 const out = {
-  globe,
-  globeIndia,
+  globeBorder,
   region: { ...REGION, cols, rows, cells, india: indiaCells, border, states },
 };
 const json = JSON.stringify(out);
 await writeFile(OUT, json);
 console.log(
-  `wrote ${OUT} (${(json.length / 1024).toFixed(0)} KB): ${globe.length / 2} + ${globeIndia.length / 2} globe dots, ` +
+  `wrote ${OUT} (${(json.length / 1024).toFixed(0)} KB): ${globeBorder.length} globe rings, ` +
     `${cells.length / 2} + ${indiaCells.length / 2} map dots, border ${border.length} B, states ${states.length} B`,
 );

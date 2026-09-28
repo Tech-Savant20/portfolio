@@ -47,6 +47,34 @@ export function initTerminal() {
     out.append(p);
     out.scrollTop = out.scrollHeight;
   };
+  /** A number on a split-flap board: each cell clatters through digits, left to right, and lands. */
+  const flaps = (value: string) => {
+    const row = document.createElement("p");
+    row.className = "flaps";
+    row.setAttribute("aria-label", value);
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    [...value].forEach((ch, i) => {
+      const cell = document.createElement("span");
+      cell.setAttribute("aria-hidden", "true");
+      const digit = /\d/.test(ch);
+      cell.className = digit ? "flap" : "flap sep";
+      cell.textContent = digit && !reduced ? "0" : ch;
+      row.append(cell);
+      if (!digit || reduced) return;
+      // Later cells start later and spin longer, so the board settles left to right.
+      let steps = 6 + i * 2 + Math.floor(Math.random() * 4);
+      const tick = () => {
+        cell.classList.remove("is-flipping");
+        void cell.offsetWidth;
+        cell.classList.add("is-flipping");
+        cell.textContent = steps <= 0 ? ch : String((Number(cell.textContent) + 1) % 10);
+        if (steps-- > 0) window.setTimeout(tick, 55);
+      };
+      window.setTimeout(tick, i * 40);
+    });
+    out.append(row);
+    out.scrollTop = out.scrollHeight;
+  };
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
   const link = (href: string, text: string) => `<a href="${esc(href)}"${href.startsWith("http") ? ' target="_blank" rel="noopener"' : ""}>${esc(text)}</a>`;
 
@@ -133,6 +161,7 @@ export function initTerminal() {
         ["open <name>", "jump to a section or case study, e.g. open homelab"],
         ["ping jarvis", "ask the live homelab which services are up"],
         ["status", "30-day uptime page"],
+        ["visits", "how many visits this site has had"],
         ["date", "the time in Pune"],
         ["theme dark|light", "switch the colour theme"],
         ["shuffle", "shuffle the certifications deck"],
@@ -215,6 +244,22 @@ export function initTerminal() {
     },
     status() {
       location.href = "/status";
+    },
+    async visits() {
+      try {
+        const r = await fetch("/api/visits", { headers: { accept: "application/json" } });
+        const v = (await r.json()) as { ok?: boolean; total?: number; today?: number; since?: string | null };
+        if (!v.ok) throw new Error();
+        const n = (x = 0) => x.toLocaleString("en-IN");
+        const since = v.since
+          ? new Date(`${v.since}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+          : "today";
+        flaps(n(v.total));
+        line(`visit${v.total === 1 ? "" : "s"} since ${since} · ${n(v.today)} today`, "ok");
+        line("One per browser session. Counted by the site's own Worker: no cookies, no trackers.", "dim");
+      } catch {
+        line("no reply: the visit counter only runs on the live site.", "warn");
+      }
     },
     date() {
       line(`${puneTime()} in Pune (IST)`);

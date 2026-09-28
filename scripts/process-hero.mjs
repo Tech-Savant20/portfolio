@@ -1,19 +1,25 @@
 // Turns the studio photo into the home page hero.
 //
 //   photo-src/hero-source.png   (the original, git-ignored)
-//     -> src/assets/hero.jpg      (high-quality JPEG; Astro makes AVIF/WebP sizes from it)
+//     -> src/assets/hero.jpg      (the full photo, for the Open Graph cards)
 //     -> src/data/hero.json       (the backdrop colours sampled from the photo's edges)
+//   photo-src/hero-cutout.png   (the same photo with the backdrop removed)
+//     -> src/assets/hero-cutout.webp  (what the hero shows; Astro makes the sizes)
 //
-// The hero paints its background with the sampled colours, and the photo's own
-// edges are feathered in CSS, so the photo melts into the page rather than
-// sitting in a box.
+// The hero paints the studio wall and the disc behind the head in CSS, in the
+// light theme from the sampled colours and in the dark theme in dark tones, so
+// the one cut-out works in both. The cut-out was made once with
+// @imgly/background-removal-node (run outside the project, it isn't a dependency).
 //
 // Usage: npm run hero
 import sharp from "sharp";
+import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 
 const SRC = "photo-src/hero-source.png";
+const CUTOUT = "photo-src/hero-cutout.png";
 const OUT = "src/assets/hero.jpg";
+const OUT_CUTOUT = "src/assets/hero-cutout.webp";
 const DATA = "src/data/hero.json";
 
 const img = sharp(SRC).removeAlpha();
@@ -60,3 +66,10 @@ const hero = {
 await img.jpeg({ quality: 92, mozjpeg: true, chromaSubsampling: "4:4:4" }).toFile(OUT);
 await writeFile(DATA, `${JSON.stringify(hero, null, 2)}\n`);
 console.log(`wrote ${OUT} (${W}x${H}) and ${DATA}`, hero.backdrop, `ink ${ink}`);
+
+if (existsSync(CUTOUT)) {
+  await sharp(CUTOUT).webp({ quality: 92, alphaQuality: 100, smartSubsample: true }).toFile(OUT_CUTOUT);
+  console.log(`wrote ${OUT_CUTOUT}`);
+} else {
+  console.warn(`no ${CUTOUT}: the hero keeps its current cut-out`);
+}

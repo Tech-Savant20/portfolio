@@ -15,8 +15,8 @@ gsap.registerPlugin(ScrollTrigger);
  */
 
 interface Geo {
-  globe: number[];
-  globeIndia: number[];
+  /** India's boundary for the globe: rings of [lon, lat, ...]. */
+  globeBorder: number[][];
   region: {
     cols: number;
     rows: number;
@@ -225,7 +225,7 @@ function setupHorizontal(section: HTMLElement, loadGeo: () => Promise<Geo | null
       const [g, mod] = await Promise.all([loadGeo(), import("./journey-globe")]);
       if (!g) return;
       const places = JSON.parse(section.dataset.places ?? "[]") as { lon: number; lat: number }[];
-      globe = mod.createGlobe(globeBox, { land: g.globe, india: g.globeIndia, places, focus: { lon: 79, lat: 22 } });
+      globe = mod.createGlobe(globeBox, { border: g.globeBorder, places, focus: { lon: 79, lat: 22 } });
       globe.setProgress(globe$.p);
       addEventListener("themechange", () => requestAnimationFrame(() => globe?.setColors()));
       matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => globe?.setColors());

@@ -44,6 +44,8 @@ interface Card {
   verify: HTMLAnchorElement | null;
   up: boolean;
   slot: number;
+  /** The turn in progress, so a new one can replace it cleanly. */
+  turn?: gsap.core.Timeline;
 }
 
 const phone = () => matchMedia("(max-width: 767px)").matches;
@@ -151,14 +153,22 @@ export function initDeck() {
 
   const setFace = (c: Card, up: boolean, delay = 0) => {
     c.up = up;
-    c.el.classList.toggle("is-down", !up);
     c.flip.setAttribute("aria-pressed", String(up));
     if (c.verify) c.verify.tabIndex = up ? 0 : -1;
-    // Lift toward the viewer while turning, then settle.
-    gsap.to(c.inner, { z: 70, duration: 0.3, ease: "power2.out", delay, overwrite: "auto" });
-    gsap.to(c.inner, { z: 0, duration: 0.4, ease: "power2.in", delay: delay + 0.3 });
-    gsap.to(c.inner, { rotationY: up ? 0 : 180, duration: 0.75, ease: "back.out(1.4)", delay });
+    // One timeline per turn: a new turn replaces an unfinished one instead of
+    // fighting it. The face-down class changes when the card actually turns.
+    c.turn?.kill();
+    c.turn = gsap
+      .timeline({ delay })
+      .call(() => c.el.classList.toggle("is-down", !up), [], 0)
+      // Lift toward the viewer while turning, then settle.
+      .to(c.inner, { z: 70, duration: 0.3, ease: "power2.out" }, 0)
+      .to(c.inner, { z: 0, duration: 0.4, ease: "power2.in" }, 0.3)
+      .to(c.inner, { rotationY: up ? 0 : 180, duration: 0.75, ease: "back.out(1.4)" }, 0);
   };
+
+  /** Stops any move still running on the cards (the hint wave, the idle flourish). */
+  const stopMoves = () => cards.forEach((c) => gsap.killTweensOf(c.el, "x,y,rotation"));
 
   // ---------------------------------------------------------------- place
 
@@ -190,6 +200,7 @@ export function initDeck() {
 
   /** Cards back into one face-down deck while the hands come up to take it. */
   const gather = () => {
+    stopMoves();
     const tl = gsap.timeline();
     cards.forEach((c, i) => {
       if (c.up) setFace(c, false);
@@ -394,6 +405,8 @@ export function initDeck() {
    */
   const waveReveal = (only?: Card) => {
     disarm();
+    // The hint wave may still be lifting cards; it would fight the slide.
+    stopMoves();
     state = "spread";
     busy = true;
     refresh();
@@ -409,7 +422,9 @@ export function initDeck() {
       const d = k * 0.13;
       c.slot = k;
       if (!only) setFace(c, true, d);
-      gsap.set(c.el, { zIndex: 20 + k, delay: d });
+      // All at once and in the ribbon's own order, so no card pops over its
+      // neighbour before it has moved.
+      gsap.set(c.el, { zIndex: 20 + k });
       gsap.to(c.el, { ...slotSpot(k), duration: 0.7, ease: "power3.inOut", delay: d + 0.25 });
     });
     // The picked card turns over once it has landed in its spot.

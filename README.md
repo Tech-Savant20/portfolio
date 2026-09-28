@@ -1,4 +1,4 @@
-﻿# abhyudaytomar.com
+# abhyudaytomar.com
 
 My portfolio. One site with three views (backend, cloud and AI/ML) that reorder
 the same work for whoever is reading, four case studies, and a live 3D map of my
@@ -36,7 +36,9 @@ site comes from there.
 | `npm run deploy` | Build and deploy to Cloudflare |
 | `npm run check` | Type-check the site and the Worker |
 | `npm run photo` | Rebuild the tritone portrait from `photo-src/portrait-cutout.png` |
-| `npm run hero` | Rebuild the hero photo and its backdrop colours from `photo-src/hero-source.png` |
+| `npm run hero` | Rebuild the hero cut-out and its backdrop colours from `photo-src/` |
+| `node scripts/make-earth.mjs` | Rebuild the journey globe's NASA imagery (downloads ~170 MB once, to a cache outside the project) |
+| `node scripts/make-geo.mjs` | Rebuild the journey's India map and boundary data |
 | `npm test` | Blackjack rules tests |
 | `node scripts/make-images.mjs` | Re-render the Open Graph cards (the role cards from the hero photo) and touch icon |
 | `node scripts/smoke-api.mjs <url> <token>` | Smoke-test the API and pages |
@@ -89,25 +91,39 @@ inside the free plan's 100,000; rows older than 400 days are dropped.
   the screen lifts off with a curved edge. Once per browser session, home pages
   only; an inline script decides before first paint, so there's no flash, and
   it never shows without JS or with reduced motion.
-- **Hero** (`Hero.astro`, `src/scripts/hero.ts`): the studio photo on its own
-  backdrop colour (the same in both themes), the name as a giant marquee that
+- **Hero** (`Hero.astro`, `src/scripts/hero.ts`): a cut-out of the studio photo
+  in front of a painted wall and disc, which follow the theme (the photo's own
+  grey in light, a dark studio in dark), the name as a giant marquee that
   reverses with the scroll direction and speeds up with scroll velocity, a
-  "Located in" pill, and the role line. The photo comes from
-  `photo-src/hero-source.png` (git-ignored): `npm run hero` writes
-  `src/assets/hero.jpg` and samples the backdrop colours into
-  `src/data/hero.json`.
+  "Located in" pill, and the role line. From `photo-src/` (git-ignored):
+  `npm run hero` writes `src/assets/hero-cutout.webp` from `hero-cutout.png`
+  (made once with @imgly/background-removal-node, not a dependency),
+  `src/assets/hero.jpg` (the full photo, for the Open Graph cards) and the
+  wall colours in `src/data/hero.json`.
+- **Vibe** (`src/scripts/vibe.ts`): "Playing music? Let the circle vibe" makes
+  the disc behind the photo swell and glow with the bass and send out a ring on
+  each beat. A page can't hear other tabs or apps, so it listens through the
+  microphone, only after the button is pressed; the sound is analysed in the
+  browser and never recorded or sent. `Permissions-Policy` allows the
+  microphone for the site itself only.
 - **Menu** (`MenuPanel.astro`, `src/scripts/menu.ts`): over the hero the bar
   takes the hero's ink; past it, the bar slides away and a round menu button
   opens a dark panel with a curved edge (sections, role views, theme, game
-  mode, socials). Esc closes it, focus stays inside while it's open.
+  mode, socials), with a round theme switch beside it. Esc closes it, focus
+  stays inside while it's open.
 
 ## My journey
 
 `Journey.astro`, `src/scripts/journey.ts`, `src/scripts/journey-globe.ts`,
 data in `src/data/journey.ts`. On wide screens it pins and scrolls sideways: a
-three.js dot globe turns to India, a dot map of the subcontinent follows with an
-orb travelling city to city, then the milestones on a wave the orb rides.
-Phones and reduced motion get it stacked. `node scripts/make-geo.mjs` writes
+three.js Earth turns to India and zooms in, a dot map of the subcontinent
+follows with an orb travelling city to city, then the milestones on a wave the
+orb rides. Phones and reduced motion get it stacked.
+
+The Earth is NASA's Blue Marble Next Generation (public domain):
+`node scripts/make-earth.mjs` writes a 2048 px world and a sharper patch over
+the subcontinent (`public/journey/earth-*.webp`, about 530 KB, loaded only
+when the section is near on desktop). `node scripts/make-geo.mjs` writes
 `public/journey/geo.json`: land dots from Natural Earth (public domain), and
 India drawn to its official boundary as shown by the Survey of India (all of
 Jammu & Kashmir and Ladakh, and Arunachal Pradesh), with its 36 states and
@@ -128,7 +144,8 @@ The joystick in the nav (or `play` in the terminal) turns on game mode
 (`src/scripts/game-mode.ts`): a "Player 1, press start" splash with a coin
 sound, a violet arcade reskin with faint scanlines, and a HUD at the bottom
 with your aura this week, the six secrets as quests (click for a hint to the
-next one) and the way into `/casino`, blackjack for aura points. Everyone starts each weekly season (Monday, India time) on 1,000
+next one) and the way into `/casino`, blackjack for aura points. On the home
+page the sunglasses light up with rupee signs. Everyone starts each weekly season (Monday, India time) on 1,000
 aura; the top ten are on the board and last week's leader is crowned.
 
 Your bet sits on the felt as a stack of chips: they fly in from the chip
@@ -159,7 +176,10 @@ the pages.
 
 - A terminal opens with the backtick key, or a long press on the logo on phones
   (`src/scripts/terminal.ts`). `help` lists the commands; `ping jarvis` asks the
-  real `/api/status`.
+  real `/api/status`; `visits` shows the visit count on a split-flap board.
+  Visits are counted once per browser session by `POST /api/visits`
+  (`worker/visits.ts`, `worker/migrations/0004_visits.sql`): only a daily
+  total is stored, posts must come from the site itself and are rate limited.
 - `xray` in the terminal outlines each component and shows the page's real
   weight from resource timing (`src/scripts/xray.ts`).
 - The Konami code (or `herotime` in the terminal, for phones) starts hype mode
@@ -171,7 +191,7 @@ the pages.
   show. Esc or "Power down" ends it early; reduced motion keeps only the
   colours and the countdown. Sounds are synthesised and follow the deck's
   sound switch.
-- The footer counts the six secrets found (`src/scripts/secrets.ts`, kept in
+- The footer counts the six secrets found, with a segment lighting up for each (`src/scripts/secrets.ts`, kept in
   `localStorage`): the terminal, X-ray, Konami, the Omnitrix, three hand
   shuffles in a row, and a blackjack in the casino.
 - Case-study diagrams send a sample request along their edges, and the LastMile

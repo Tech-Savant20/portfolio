@@ -1,6 +1,5 @@
 ---
 import { roles, type RoleKey } from "../data/site";
-import hero from "../data/hero.json";
 import Icon from "./Icon.astro";
 import MenuPanel from "./MenuPanel.astro";
 import RoleSwitcher from "./RoleSwitcher.astro";
@@ -21,7 +20,7 @@ const sectionHref = (id: string) => (onHome ? `#${id}` : `${home}#${id}`);
 ---
 
 <div class="sentinel" data-nav-sentinel aria-hidden="true"></div>
-<header class="nav" class:list={{ "has-hero": onHome }} data-nav style={`--hero-ink:${hero.ink}`}>
+<header class="nav" class:list={{ "has-hero": onHome }} data-nav>
   <div class="inner container-x">
     {/* "© Code by Abhyuday"; on hover the © turns and the words roll over to the full name. */}
     <a href={home} class="brand" data-home-link>
@@ -139,9 +138,9 @@ const sectionHref = (id: string) => (onHome ? `#${id}` : `${home}#${id}`);
     gap: 1rem;
   }
 
-  /* Home page: over the hero the bar takes the hero's ink, whatever the theme,
-     and has no background; once the hero is gone it slides away (the round
-     menu button takes over). */
+  /* Home page: over the hero the bar takes the hero's ink (--hero-ink, per
+     theme) and has no background; once the hero is gone it slides away (the
+     round menu button takes over). */
   .nav.has-hero {
     transition:
       transform 0.6s var(--ease-out),
@@ -154,8 +153,8 @@ const sectionHref = (id: string) => (onHome ? `#${id}` : `${home}#${id}`);
     --fg-muted: color-mix(in oklab, var(--hero-ink) 72%, transparent);
     --line: color-mix(in oklab, var(--hero-ink) 16%, transparent);
     --line-strong: color-mix(in oklab, var(--hero-ink) 30%, transparent);
-    --surface: color-mix(in oklab, white 45%, transparent);
-    --bg: #f4f4f2;
+    --surface: var(--hero-surface);
+    --bg: var(--hero-wall);
     color: var(--fg);
     background: transparent !important;
     border-bottom-color: transparent !important;

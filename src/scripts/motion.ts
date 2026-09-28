@@ -107,7 +107,7 @@ export function initHeroScroll() {
   // with fill-mode "both" would override inline transforms on the parent.
   tl.to(hero.querySelector("[data-hero-track]"), { yPercent: -55, ease: "none" }, 0)
     .to(hero.querySelector("[data-hero-photo] img"), { yPercent: 12, ease: "none" }, 0)
-    .to(hero.querySelectorAll("[data-hero-where] > *, [data-hero-role] > *"), {
+    .to(hero.querySelectorAll("[data-hero-where] > *, [data-hero-vibe], [data-hero-role] > *"), {
       y: -70,
       opacity: 0,
       ease: "none",

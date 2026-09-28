@@ -252,7 +252,7 @@ ssh -i "$SSH_KEY" "$REMOTE_USER@$REMOTE_HOST" \\
     slug: "docpilot",
     name: "DocPilot",
     kind: "Clinic platform, team of six",
-    period: "Jul 2026",
+    period: "Mar - Jul 2026",
     team: "Backend developer on a six-person EPICS capstone team at VIT Bhopal",
     summary:
       "An outpatient clinic platform with a live queue, telehealth and an AI scribe that turns consultations into structured notes. I owned the data and security layer.",

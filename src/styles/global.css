@@ -39,6 +39,11 @@
   --card: #fbfbf9;
   --card-edge: rgb(18 18 19 / 0.1);
   --card-shadow: 0 1px 2px rgb(18 18 19 / 0.05), 0 30px 70px -34px rgb(18 18 19 / 0.28);
+  /* The home page's opening: a studio wall, a disc behind the head, and ink that reads on it. */
+  --hero-ink: #111112;
+  --hero-wall: #dcdcdd;
+  --hero-surface: rgb(255 255 255 / 0.45);
+  --hero-disc: linear-gradient(45deg, #7a7a7c, #c4c4c6);
   --grain-opacity: 0.05;
 
   --nav-h: 4rem;
@@ -73,6 +78,10 @@
     --card: #19191c;
     --card-edge: rgb(237 237 234 / 0.12);
     --card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 40px 80px -40px rgb(0 0 0 / 0.9);
+    --hero-ink: #f2f2ef;
+    --hero-wall: #111113;
+    --hero-surface: rgb(255 255 255 / 0.08);
+    --hero-disc: linear-gradient(45deg, #161618, #2b2b30);
     --grain-opacity: 0.07;
   }
 }
@@ -95,6 +104,10 @@
   --card: #19191c;
   --card-edge: rgb(237 237 234 / 0.12);
   --card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 40px 80px -40px rgb(0 0 0 / 0.9);
+  --hero-ink: #f2f2ef;
+  --hero-wall: #111113;
+  --hero-surface: rgb(255 255 255 / 0.08);
+  --hero-disc: linear-gradient(45deg, #161618, #2b2b30);
   --grain-opacity: 0.07;
 }
 

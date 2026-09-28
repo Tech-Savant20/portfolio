@@ -1,17 +1,22 @@
 import * as THREE from "three";
 
 /**
- * The journey's opening globe: land as dots on a sphere, the places he lived
- * as accent dots. `setProgress(0..1)` turns it from the far side of the world
- * to India and zooms in; it renders only when something changes.
+ * The journey's opening globe: the real Earth (NASA Blue Marble, public
+ * domain), lit from the upper left, with a thin atmosphere, the places he
+ * lived as accent dots and India's official boundary as a line.
+ * `setProgress(0..1)` turns it from the far side of the world to India and
+ * zooms in; it renders only when something changes.
+ *
+ * Two textures: the whole world at 2048 px (plenty while the globe is small),
+ * and a sharper patch over the subcontinent for the close-up, laid on a
+ * slightly larger piece of sphere and feathered at its edges.
+ * Both are made by scripts/make-earth.mjs.
  */
 
 export interface GlobeOptions {
-  /** Land dots as [lon, lat, lon, lat, ...]. */
-  land: number[];
-  /** Dots inside India's official boundary, drawn stronger. */
-  india: number[];
   places: { lon: number; lat: number }[];
+  /** India's boundary, as rings of [lon, lat, lon, lat, ...]. */
+  border: number[][];
   /** Where it ends up facing. */
   focus: { lon: number; lat: number };
 }
@@ -23,10 +28,15 @@ export interface Globe {
   dispose(): void;
 }
 
+/** Must match scripts/make-earth.mjs. */
+const PATCH = { west: 60, east: 104, south: 0, north: 44 };
+const WORLD_URL = "/journey/earth-world.webp";
+const PATCH_URL = "/journey/earth-india.webp";
+
 const RAD = Math.PI / 180;
 
 /** lon 0 faces the camera (+z); y is north. */
-const toXYZ = (lon: number, lat: number, r = 1) => [
+const toXYZ = (lon: number, lat: number, r = 1): [number, number, number] => [
   r * Math.cos(lat * RAD) * Math.sin(lon * RAD),
   r * Math.sin(lat * RAD),
   r * Math.cos(lat * RAD) * Math.cos(lon * RAD),
@@ -51,9 +61,37 @@ function dotTexture() {
   return t;
 }
 
+/** A glow round the rim, brightest at the edge of the disc. */
+function atmosphere() {
+  return new THREE.Mesh(
+    new THREE.SphereGeometry(1.07, 64, 48),
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: { tint: { value: new THREE.Color("#5aa9ff") } },
+      vertexShader: /* glsl */ `
+        varying vec3 vNormal;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform vec3 tint;
+        varying vec3 vNormal;
+        void main() {
+          float rim = pow(clamp(0.72 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 3.0);
+          gl_FragColor = vec4(tint, 1.0) * rim * 0.7;
+        }`,
+    }),
+  );
+}
+
 export function createGlobe(container: HTMLElement, opts: GlobeOptions): Globe {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
   container.append(renderer.domElement);
 
   const scene = new THREE.Scene();
@@ -61,50 +99,86 @@ export function createGlobe(container: HTMLElement, opts: GlobeOptions): Globe {
   const globe = new THREE.Group();
   scene.add(globe);
 
-  const sprite = dotTexture();
+  // Light stays with the camera, so the side facing us is always day.
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const sun = new THREE.DirectionalLight(0xffffff, 2.4);
+  sun.position.set(-3, 2.2, 4);
+  scene.add(sun);
 
-  // The sphere itself hides the dots on the far side.
-  const body = new THREE.Mesh(
-    new THREE.SphereGeometry(0.985, 64, 48),
-    new THREE.MeshBasicMaterial({ color: 0x000000 }),
+  const loader = new THREE.TextureLoader();
+  const load = (url: string) =>
+    loader.loadAsync(url).then((t) => {
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      return t;
+    });
+
+  // Three's sphere starts its texture at a different longitude from the
+  // equirectangular images; a quarter turn lines them up with toXYZ.
+  const earthMat = new THREE.MeshStandardMaterial({ color: 0x1b2a3a, roughness: 0.92, metalness: 0 });
+  const earth = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 96), earthMat);
+  earth.rotation.y = -Math.PI / 2;
+  globe.add(earth);
+
+  const patchMat = new THREE.MeshStandardMaterial({ transparent: true, roughness: 0.92, metalness: 0, visible: false });
+  const patch = new THREE.Mesh(
+    new THREE.SphereGeometry(
+      1.0006,
+      64,
+      64,
+      (PATCH.west + 180) * RAD,
+      (PATCH.east - PATCH.west) * RAD,
+      (90 - PATCH.north) * RAD,
+      (PATCH.north - PATCH.south) * RAD,
+    ),
+    patchMat,
   );
-  globe.add(body);
+  patch.rotation.y = -Math.PI / 2;
+  globe.add(patch);
 
-  const dots = (lonLat: number[]) => {
-    const pos = new Float32Array((lonLat.length / 2) * 3);
-    for (let i = 0; i < lonLat.length; i += 2) pos.set(toXYZ(lonLat[i], lonLat[i + 1]), (i / 2) * 3);
+  const textures: THREE.Texture[] = [];
+  load(WORLD_URL)
+    .then((t) => {
+      textures.push(t);
+      earthMat.map = t;
+      earthMat.color.set(0xffffff);
+      earthMat.needsUpdate = true;
+      render();
+      return load(PATCH_URL);
+    })
+    .then((t) => {
+      textures.push(t);
+      patchMat.map = t;
+      patchMat.visible = true;
+      patchMat.needsUpdate = true;
+      render();
+    })
+    .catch(() => {});
+
+  const air = atmosphere();
+  scene.add(air);
+
+  // India's official boundary, just above the surface.
+  const borderMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 });
+  const borderGeos = opts.border.map((ring) => {
+    const pts: number[] = [];
+    for (let i = 0; i < ring.length; i += 2) pts.push(...toXYZ(ring[i], ring[i + 1], 1.0015));
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+    globe.add(new THREE.LineLoop(geo, borderMat));
     return geo;
-  };
-  const landGeo = dots(opts.land);
-  const landMat = new THREE.PointsMaterial({ size: 0.022, map: sprite, transparent: true, opacity: 0.45, depthWrite: false });
-  globe.add(new THREE.Points(landGeo, landMat));
-  const indiaGeo = dots(opts.india);
-  const indiaMat = new THREE.PointsMaterial({ size: 0.026, map: sprite, transparent: true, depthWrite: false });
-  globe.add(new THREE.Points(indiaGeo, indiaMat));
+  });
 
+  const sprite = dotTexture();
   const placePos = new Float32Array(opts.places.length * 3);
   opts.places.forEach((p, i) => placePos.set(toXYZ(p.lon, p.lat, 1.004), i * 3));
   const placeGeo = new THREE.BufferGeometry();
   placeGeo.setAttribute("position", new THREE.BufferAttribute(placePos, 3));
-  const placeMat = new THREE.PointsMaterial({ size: 0.06, map: sprite, transparent: true, depthWrite: false });
+  const placeMat = new THREE.PointsMaterial({ size: 0.045, map: sprite, transparent: true, depthWrite: false });
   globe.add(new THREE.Points(placeGeo, placeMat));
 
-  // A thin ring round the edge of the globe.
-  const rim = new THREE.Mesh(
-    new THREE.RingGeometry(1.0, 1.006, 128),
-    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.35 }),
-  );
-  scene.add(rim);
-
   const setColors = () => {
-    const bg = new THREE.Color(cssColor("--bg", "#0d0d0e"));
-    (body.material as THREE.MeshBasicMaterial).color = bg;
-    landMat.color = new THREE.Color(cssColor("--fg-subtle", "#8a8a8a"));
-    indiaMat.color = new THREE.Color(cssColor("--fg", "#ededea"));
     placeMat.color = new THREE.Color(cssColor("--accent", "#ff5a1f"));
-    (rim.material as THREE.MeshBasicMaterial).color = new THREE.Color(cssColor("--line-strong", "#444"));
     render();
   };
 
@@ -119,9 +193,8 @@ export function createGlobe(container: HTMLElement, opts: GlobeOptions): Globe {
     const lat = START_LAT + (opts.focus.lat - START_LAT) * t;
     // Turn the chosen point to face the camera: spin by longitude, tilt by latitude.
     globe.rotation.set(lat * RAD, -lon * RAD, 0, "XYZ");
-    camera.position.set(0, 0, 6.2 - 3.3 * t);
+    camera.position.set(0, 0, 6.2 - 3.4 * t);
     camera.lookAt(0, 0, 0);
-    rim.visible = t < 0.35;
     renderer.render(scene, camera);
   }
 
@@ -148,9 +221,12 @@ export function createGlobe(container: HTMLElement, opts: GlobeOptions): Globe {
     resize,
     dispose() {
       renderer.dispose();
-      landGeo.dispose();
-      indiaGeo.dispose();
+      earth.geometry.dispose();
+      patch.geometry.dispose();
+      air.geometry.dispose();
       placeGeo.dispose();
+      borderGeos.forEach((g) => g.dispose());
+      textures.forEach((t) => t.dispose());
       sprite.dispose();
       renderer.domElement.remove();
     },

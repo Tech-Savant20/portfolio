@@ -37,9 +37,15 @@
     }
   ],
 
-  // At most 5 contact submissions a minute per visitor IP, and 90 casino
-  // actions (deals, hits, stands, joins) a minute, well above human play.
+  // At most 5 contact submissions a minute per visitor IP, 90 casino actions
+  // (deals, hits, stands, joins) a minute, well above human play, and 10
+  // counted visits a minute (the counter behind the terminal's `visits`).
   "ratelimits": [
+    {
+      "name": "VISIT_LIMITER",
+      "namespace_id": "1003",
+      "simple": { "limit": 10, "period": 60 }
+    },
     {
       "name": "CONTACT_LIMITER",
       "namespace_id": "1001",

@@ -7,9 +7,11 @@
  *   GET  /api/uptime   30 days of daily uptime per service, for /status
  *   POST /api/contact  contact form: Turnstile check, archive in Supabase, email to me
  *   /api/casino/*      blackjack for aura points (worker/casino.ts)
+ *   /api/visits        the visit counter for the terminal's `visits` (worker/visits.ts)
  */
 
 import { casino } from "./casino";
+import { visits } from "./visits";
 import { hostnames, json, methodNotAllowed, readBody, safeHost, str, verifyTurnstile } from "./http";
 
 const MAX_STATUS_BYTES = 64 * 1024;
@@ -49,6 +51,7 @@ export default {
         return methodNotAllowed("POST");
       }
       if (url.pathname.startsWith("/api/casino/")) return await casino(request, env, ctx, url);
+      if (url.pathname === "/api/visits") return await visits(request, env, ctx);
       if (url.pathname.startsWith("/api/")) return json({ ok: false, error: "not_found" }, 404);
       return env.ASSETS.fetch(request);
     } catch (err) {

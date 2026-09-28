@@ -1,6 +1,6 @@
 ---
 import { Image } from "astro:assets";
-import heroPhoto from "../assets/hero.jpg";
+import heroPhoto from "../assets/hero-cutout.webp";
 import hero from "../data/hero.json";
 import { roles, site, type RoleKey } from "../data/site";
 import Icon from "./Icon.astro";
@@ -15,20 +15,16 @@ interface Props {
 const { role, resume, journey = false } = Astro.props;
 const r = roles[role];
 const b = hero.backdrop;
-// The studio backdrop is the photo's own wall, in both themes; the type is
-// whatever reads on it. Everything inside the hero uses these instead of the theme.
-const vars = [
-  `--bd-top:${b.top}`,
-  `--bd-bottom:${b.bottom}`,
-  `--bd-left:${b.left}`,
-  `--bd-right:${b.right}`,
-  `--hero-ink:${hero.ink}`,
-].join(";");
+// The photo is a cut-out; the studio wall and the disc behind the head are
+// painted here. In the light theme the wall is the photo's own (sampled from
+// its edges by `npm run hero`); in the dark theme it's a dark studio.
+const vars = [`--photo-top:${b.top}`, `--photo-bottom:${b.bottom}`, `--photo-left:${b.left}`, `--photo-right:${b.right}`].join(";");
 const name = `${site.name} —`;
 ---
 
 <section class="hero" aria-labelledby="hero-name" data-hero style={vars}>
   <div class="photo" data-hero-photo>
+    <span class="disc" aria-hidden="true" data-hero-disc></span>
     <Image
       src={heroPhoto}
       alt="Portrait of Abhyuday Tomar"
@@ -37,6 +33,16 @@ const name = `${site.name} —`;
       quality={85}
       priority
     />
+    {/* Game mode: rupee signs light up in the lenses. */}
+    <span class="rupees" aria-hidden="true">
+      {
+        ["near", "far"].map((lens) => (
+          <svg class:list={["rupee", lens]} viewBox="0 0 24 24">
+            <path d="M6 3h12M6 8h12M6 3h3a5 5 0 0 1 0 10H6l9 8" />
+          </svg>
+        ))
+      }
+    </span>
   </div>
 
   <div class="inner container-x">
@@ -65,6 +71,21 @@ const name = `${site.name} —`;
         </p>
       )
     }
+
+    {/* The disc moves to whatever music is playing nearby. Opt-in: it asks for the
+        microphone only when pressed, and the sound never leaves the browser. */}
+    <button
+      type="button"
+      class="vibe"
+      aria-pressed="false"
+      title="Uses your microphone to hear the beat. Nothing is recorded or sent anywhere."
+      data-hero-vibe
+      hidden
+    >
+      <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
+      <Icon name="music-notes" size="1.05rem" class="note" />
+      <span data-vibe-label>Playing music? Let the circle vibe</span>
+    </button>
 
     <div class="role" data-hero-role>
       <Icon name="arrow-down-right" size="1.75rem" class="arrow" />
@@ -104,13 +125,18 @@ const name = `${site.name} —`;
 
 <style>
   .hero {
-    /* Theme-independent ink, so the nav, buttons and text read on the backdrop. */
+    /* The wall: the photo's own in the light theme, a dark studio in the dark one. */
+    --bd-top: var(--photo-top);
+    --bd-bottom: var(--photo-bottom);
+    --bd-left: var(--photo-left);
+    --bd-right: var(--photo-right);
+    /* Ink for the wall (global.css), so the nav, buttons and text read on it. */
     --fg: var(--hero-ink);
     --fg-muted: color-mix(in oklab, var(--hero-ink) 72%, transparent);
     --fg-subtle: color-mix(in oklab, var(--hero-ink) 45%, transparent);
     --line: color-mix(in oklab, var(--hero-ink) 16%, transparent);
     --line-strong: color-mix(in oklab, var(--hero-ink) 30%, transparent);
-    --surface: color-mix(in oklab, white 45%, transparent);
+    --surface: var(--hero-surface);
     --bg: var(--bd-top);
 
     position: relative;
@@ -144,11 +170,203 @@ const name = `${site.name} —`;
     pointer-events: none;
   }
 
+  :global(:root[data-theme="dark"]) .hero {
+    --bd-top: #151517;
+    --bd-bottom: var(--hero-wall);
+    --bd-left: var(--hero-wall);
+    --bd-right: var(--hero-wall);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .hero {
+      --bd-top: #151517;
+      --bd-bottom: var(--hero-wall);
+      --bd-left: var(--hero-wall);
+      --bd-right: var(--hero-wall);
+    }
+  }
+
   .photo :global(img) {
+    position: relative;
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center bottom;
+  }
+
+  /* Rupee signs in the lenses, placed on the photo (lens centres measured in
+     the 1254 px original: near lens 764,546; far lens 945,600). */
+  .rupees {
+    display: none;
+  }
+
+  :global(html.game-mode) .rupees {
+    display: block;
+  }
+
+  .rupee {
+    position: absolute;
+    width: 7%;
+    translate: -50% -50%;
+    fill: none;
+    stroke: #ffd23f;
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 0.35rem rgb(255 196 0 / 0.9)) drop-shadow(0 0 0.1rem #fff3b0);
+  }
+
+  .rupee.near {
+    left: 60.9%;
+    top: 43.3%;
+    rotate: 9deg;
+  }
+
+  /* The far lens is turned away, so its sign is narrower. */
+  .rupee.far {
+    left: 75.3%;
+    top: 47.9%;
+    width: 5.6%;
+    rotate: 14deg;
+    scale: 0.7 1;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html.game-mode) .rupee {
+      animation:
+        rupee-in 0.6s var(--ease-out) both,
+        rupee-glint 2.4s ease-in-out 0.6s infinite;
+    }
+
+    :global(html.game-mode) .rupee.far {
+      animation-delay: 0.08s, 0.9s;
+    }
+  }
+
+  @keyframes rupee-in {
+    from {
+      opacity: 0;
+      transform: scale(0.2);
+    }
+  }
+
+  @keyframes rupee-glint {
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* The disc behind the head, where it sat in the original photo. --vibe (0-1)
+     comes from src/scripts/vibe.ts while music is playing. */
+  .disc,
+  .photo :global(.ripple) {
+    position: absolute;
+    left: 2.9%;
+    top: 1.2%;
+    width: 93.3%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+  }
+
+  .disc {
+    --vibe: 0;
+    background: var(--hero-disc);
+    transform: scale(calc(1 + var(--vibe) * 0.07));
+    box-shadow: 0 0 calc(var(--vibe) * 90px) calc(var(--vibe) * 14px) color-mix(in oklab, var(--accent) 55%, transparent);
+  }
+
+  /* A ring that leaves the disc on each beat. */
+  .photo :global(.ripple) {
+    border: 2px solid var(--accent);
+    opacity: 0;
+    animation: ripple 1s var(--ease-out) forwards;
+  }
+
+  @keyframes ripple {
+    from {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.22);
+    }
+  }
+
+  .vibe {
+    position: absolute;
+    left: 0;
+    /* Just under the "Located in" pill, which is centred in the space
+       between the nav and the name. */
+    top: calc(var(--nav-h) + (100% - var(--nav-h) - var(--pad-bottom)) / 2 + 4.25rem);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.5rem;
+    padding-inline: 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: var(--hero-surface);
+    color: var(--fg);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition:
+      background-color 0.25s ease,
+      border-color 0.25s ease;
+  }
+
+  .vibe[hidden] {
+    display: none;
+  }
+
+  .vibe:hover {
+    border-color: var(--fg);
+  }
+
+  .vibe[aria-pressed="true"] {
+    border-color: var(--accent);
+  }
+
+  /* Three bars that bounce while it's listening; the note shows otherwise. */
+  .eq {
+    display: none;
+    align-items: flex-end;
+    gap: 2px;
+    height: 0.9rem;
+  }
+
+  .eq i {
+    width: 3px;
+    height: 100%;
+    border-radius: 1px;
+    background: var(--accent);
+    transform-origin: bottom;
+    animation: eq 0.8s ease-in-out infinite;
+  }
+
+  .eq i:nth-child(2) {
+    animation-delay: -0.3s;
+  }
+
+  .eq i:nth-child(3) {
+    animation-delay: -0.55s;
+  }
+
+  @keyframes eq {
+    50% {
+      transform: scaleY(0.3);
+    }
+  }
+
+  .vibe[aria-pressed="true"] .eq {
+    display: inline-flex;
+  }
+
+  .vibe[aria-pressed="true"] :global(.note) {
+    display: none;
   }
 
   .inner {
@@ -160,8 +378,9 @@ const name = `${site.name} —`;
     align-items: center;
     justify-content: space-between;
     gap: 2rem;
+    --pad-bottom: clamp(9rem, 16vw, 16rem);
     padding-top: var(--nav-h);
-    padding-bottom: clamp(9rem, 16vw, 16rem);
+    padding-bottom: var(--pad-bottom);
   }
 
   /* "Located in" pill, hanging off the left edge of the screen like a tag:
@@ -259,8 +478,8 @@ const name = `${site.name} —`;
     will-change: transform;
   }
 
-  /* White with "difference" blending: dark on the light backdrop, white where
-     it crosses the black jacket, so the name reads across the whole photo. */
+  /* White with "difference" blending: it reads against whatever is behind it,
+     dark on the light wall and white over the jacket or the dark wall. */
   .marquee {
     mix-blend-mode: difference;
   }
@@ -387,6 +606,11 @@ const name = `${site.name} —`;
     .globe {
       width: 3rem;
       height: 3rem;
+    }
+
+    .vibe {
+      position: static;
+      align-self: flex-start;
     }
 
     .role {

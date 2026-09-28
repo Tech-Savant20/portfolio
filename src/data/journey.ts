@@ -46,11 +46,16 @@ export const places: Place[] = [
 ];
 
 const project = (slug: string) => projects[slug];
-const cert = (name: string) => certifications.find((c) => c.name.includes(name));
 
 export const milestones: Milestone[] = [
   { date: "2016", title: "First line of code", detail: "My first web page, written in HTML.", kind: "life" },
   { date: "2018", title: "Python", detail: "From markup to programming: my first language with logic in it.", kind: "life" },
+  {
+    date: "Class 12",
+    title: "A calculator with a GUI",
+    detail: "My class 12 project: a calculator in Python, with a Tkinter window and buttons.",
+    kind: "build",
+  },
   {
     date: education.period.split(" ")[0],
     title: education.school,
@@ -71,11 +76,14 @@ export const milestones: Milestone[] = [
     detail: project("finance-tracker").summary,
     kind: "build",
   },
+  // Dates from the GitHub history: DocPilot's commits start in March 2026,
+  // the homelab's in May.
   {
-    date: cert("Networking")?.date ?? "Nov 2025",
-    title: "Computer Networking",
-    detail: cert("Networking")?.issuer ?? "Coursera",
-    kind: "cert",
+    date: "Mar 2026",
+    title: project("docpilot").name,
+    detail: project("docpilot").summary,
+    kind: "build",
+    href: "/work/docpilot",
   },
   {
     date: "May 2026",
@@ -83,13 +91,6 @@ export const milestones: Milestone[] = [
     detail: project("jarvis-homelab").summary,
     kind: "build",
     href: "/work/jarvis-homelab",
-  },
-  {
-    date: project("docpilot").period,
-    title: project("docpilot").name,
-    detail: project("docpilot").summary,
-    kind: "build",
-    href: "/work/docpilot",
   },
   {
     date: project("lastmile-iq").period,

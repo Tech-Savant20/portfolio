@@ -105,6 +105,11 @@ const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
       )
     }
 
+    <script>
+      import { countVisit } from "../scripts/visit";
+      countVisit();
+    </script>
+
     {
       beaconToken && (
         <script

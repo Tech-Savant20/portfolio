@@ -4,9 +4,9 @@ import { certifications, education, leadership } from "./credentials";
 /**
  * "My journey": the places he grew up in, then the milestones since.
  *
- * Cities and years only: no schools, addresses or details of his father's
- * postings. `journeyReady` puts the section on the home page (a local build can
- * also show it with PUBLIC_JOURNEY_PREVIEW=1 while it's off).
+ * Cities in order and nothing more: no years, schools, addresses or reasons
+ * for the moves. `journeyReady` puts the section on the home page (a local
+ * build can also show it with PUBLIC_JOURNEY_PREVIEW=1 while it's off).
  */
 export const journeyReady = true;
 
@@ -15,12 +15,9 @@ export interface Place {
   state: string;
   lat: number;
   lon: number;
-  from: number;
-  /** Omitted while still there. */
-  to?: number;
-  /** Shown on the first pin. */
+  /** The first pin: where the story starts and, if the last pin matches, ends. */
   born?: boolean;
-  /** Replaces the years, e.g. "Now". */
+  /** Shown instead of the state on the map, e.g. "Now". */
   label?: string;
 }
 
@@ -34,15 +31,14 @@ export interface Milestone {
   href?: string;
 }
 
-// The cities, in order: born in Pune, his father's postings, and Pune again now.
+// The cities, in order: born in Pune, the places he grew up in, and Pune again now.
 export const places: Place[] = [
-  { city: "Pune", state: "Maharashtra", lat: 18.52, lon: 73.86, from: 2003, to: 2008, born: true },
-  { city: "Bareilly", state: "Uttar Pradesh", lat: 28.37, lon: 79.43, from: 2008, to: 2014 },
-  { city: "Tezpur", state: "Assam", lat: 26.63, lon: 92.8, from: 2014, to: 2018 },
-  { city: "Jodhpur", state: "Rajasthan", lat: 26.24, lon: 73.02, from: 2018, to: 2022 },
-  { city: "Chennai", state: "Tamil Nadu", lat: 13.08, lon: 80.27, from: 2022, to: 2024 },
-  { city: "Sirsa", state: "Haryana", lat: 29.53, lon: 75.03, from: 2024 },
-  { city: "Pune", state: "Maharashtra", lat: 18.52, lon: 73.86, from: 2026, label: "Now" },
+  { city: "Pune", state: "Maharashtra", lat: 18.52, lon: 73.86, born: true, label: "Born here" },
+  { city: "Bareilly", state: "Uttar Pradesh", lat: 28.37, lon: 79.43 },
+  { city: "Tezpur", state: "Assam", lat: 26.63, lon: 92.8 },
+  { city: "Jodhpur", state: "Rajasthan", lat: 26.24, lon: 73.02 },
+  { city: "Chennai", state: "Tamil Nadu", lat: 13.08, lon: 80.27 },
+  { city: "Pune", state: "Maharashtra", lat: 18.52, lon: 73.86, label: "Now" },
 ];
 
 const project = (slug: string) => projects[slug];

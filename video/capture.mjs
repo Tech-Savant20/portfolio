@@ -62,7 +62,7 @@ await visit(page, "/");
 await shot(page, "hero-light");
 await scrollTo(page, "#work", 300);
 await shot(page, "work-1");
-await scrollTo(page, "#journey", 2700, 3500);
+await scrollTo(page, "#journey", 3200, 3500);
 await shot(page, "journey-3");
 await scrollTo(page, "#credentials", 0, 12000);
 await shot(page, "creds-2");

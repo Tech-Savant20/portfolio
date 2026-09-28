@@ -311,8 +311,37 @@
         color: #a9a9a3;
         letter-spacing: 0.04em;
       }
+      .secrets {
+        margin-top: 64px;
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        padding: 22px 40px;
+        border-radius: 999px;
+        border: 2px solid #3a3a3c;
+        background: #161618;
+      }
+      .secrets-text {
+        font-size: 36px;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
+      .secrets-text b {
+        color: #ff6b35;
+        font-weight: 600;
+      }
+      .segs {
+        display: flex;
+        gap: 8px;
+      }
+      .seg {
+        width: 30px;
+        height: 12px;
+        border-radius: 3px;
+        background: #333336;
+      }
       .outro-foot {
-        margin-top: 70px;
+        margin-top: 56px;
         font-size: 24px;
         color: #8f8f89;
         letter-spacing: 0.16em;
@@ -325,7 +354,7 @@
       id="root"
       data-composition-id="main"
       data-start="0"
-      data-duration="38"
+      data-duration="39.5"
       data-width="1920"
       data-height="1080"
     >
@@ -426,11 +455,22 @@
       </div>
 
       <!-- Outro -->
-      <div id="outro" class="scene clip" data-start="33.6" data-duration="4.4" data-track-index="2">
+      <div id="outro" class="scene clip" data-start="33.6" data-duration="5.9" data-track-index="2">
         <div id="outro-inner">
           <div class="eyebrow mono" id="outro-eyebrow">See it live</div>
           <div class="outro-url" id="outro-url">abhyudaytomar<span>.com</span></div>
           <div class="outro-stack mono" id="outro-stack">Astro · Tailwind CSS · GSAP · Three.js · Cloudflare Workers + D1</div>
+          <div class="secrets" id="secrets">
+            <div class="secrets-text">Can you find all <b>6 secrets</b>?</div>
+            <div class="segs">
+              <div class="seg"></div>
+              <div class="seg"></div>
+              <div class="seg"></div>
+              <div class="seg"></div>
+              <div class="seg"></div>
+              <div class="seg"></div>
+            </div>
+          </div>
           <div class="outro-foot mono" id="outro-foot">Source on GitHub · Tech-Savant20/portfolio</div>
         </div>
       </div>
@@ -528,7 +568,10 @@
       tl.fromTo("#outro-eyebrow", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 33.9);
       tl.fromTo("#outro-url", { opacity: 0, y: 50, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: E }, 34.05);
       tl.fromTo("#outro-stack", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 34.6);
-      tl.fromTo("#outro-foot", { opacity: 0 }, { opacity: 1, duration: 0.7 }, 35.1);
+      tl.fromTo("#secrets", { opacity: 0, y: 30, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: E }, 35.2);
+      // The six segments light up one by one, like the footer's secret counter.
+      tl.fromTo(".seg", { backgroundColor: "#333336" }, { backgroundColor: "#ff5a1f", duration: 0.2, stagger: 0.22 }, 35.9);
+      tl.fromTo("#outro-foot", { opacity: 0 }, { opacity: 1, duration: 0.7 }, 36.4);
 
       window.__timelines["main"] = tl;
     </script>

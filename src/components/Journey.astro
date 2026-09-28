@@ -38,7 +38,7 @@ const route = (() => {
 })();
 
 const born = places.find((p) => p.born) ?? places[0];
-const years = (p: (typeof places)[number]) => p.label ?? (p.to ? `${p.from}–${p.to}` : `${p.from}–now`);
+const step = (i: number) => String(i + 1).padStart(2, "0");
 // Back where it started? Then the story is a round trip.
 const home = places[places.length - 1].city === born.city;
 const between = [...new Set(places.map((p) => p.city))].filter((c) => c !== born.city);
@@ -62,8 +62,7 @@ const kindLabel = { life: "Life", study: "Study", build: "Built", cert: "Certifi
           <p class="eyebrow">My journey</p>
           <h2 id="journey-title" class="title">{home ? `From ${born.city}, back to ${born.city}.` : `From ${born.city} to here.`}</h2>
           <p class="lede">
-            Born in {born.city}, I grew up across {between.length} cities as my father was posted around the country:
-            {cityList}.{home && ` Now I'm back in ${born.city}.`}
+            Born in {born.city}, I grew up across India, in {cityList}.{home && ` Now I'm back in ${born.city}.`}
           </p>
           <p class="hint" aria-hidden="true">
             Scroll
@@ -111,7 +110,7 @@ const kindLabel = { life: "Life", study: "Study", build: "Built", cert: "Certifi
                   style={`--x:${((p.x / cols) * 100).toFixed(2)}%;--y:${((p.y / rows) * 100).toFixed(2)}%`}
                 >
                   <span class="city">{p.city}</span>
-                  <span class="years">{p.born ? `Born ${p.from}` : years(p)}</span>
+                  <span class="years">{p.label ?? p.state}</span>
                 </span>
               ))
             }
@@ -126,7 +125,7 @@ const kindLabel = { life: "Life", study: "Study", build: "Built", cert: "Certifi
           {
             places.map((p, i) => (
               <li data-log={i}>
-                <span class="log-years">{years(p)}</span>
+                <span class="log-step">{step(i)}</span>
                 <span class="log-city">
                   {p.city}
                   <span class="log-state">{p.state}</span>
@@ -288,7 +287,7 @@ const kindLabel = { life: "Life", study: "Study", build: "Built", cert: "Certifi
 
   .log li {
     display: grid;
-    grid-template-columns: 6.5rem minmax(0, 1fr);
+    grid-template-columns: 2.5rem minmax(0, 1fr);
     gap: 1rem;
     padding-block: 0.625rem;
     border-bottom: 1px solid var(--line);
@@ -297,7 +296,7 @@ const kindLabel = { life: "Life", study: "Study", build: "Built", cert: "Certifi
       transform 0.5s var(--ease-out);
   }
 
-  .log-years {
+  .log-step {
     font-family: var(--font-mono);
     font-size: 0.8125rem;
     color: var(--fg-muted);

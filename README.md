@@ -7,9 +7,9 @@ homelab, and a few things to find if you poke around.
 **[Live site](https://abhyudaytomar.com)** · [Status](https://abhyudaytomar.com/status) ·
 [llms.txt](https://abhyudaytomar.com/llms.txt)
 
-https://github.com/user-attachments/assets/daeb84d7-9ba0-4763-892d-c666a606b0ee
+https://github.com/user-attachments/assets/3480e171-b327-4d7f-8b9d-c4c4f3ce1922
 
-<sub>A 38-second tour of the site. If the player doesn't load, [download the MP4](docs/tour.mp4).</sub>
+<sub>A 40-second tour of the site. If the player doesn't load, [download the MP4](docs/tour.mp4).</sub>
 
 ## What's on it
 
@@ -170,8 +170,8 @@ Jammu & Kashmir and Ladakh, and Arunachal Pradesh), with its 36 states and
 union territories.
 
 The section is on while `journeyReady` is true in `src/data/journey.ts`, which
-holds the places (Pune, then Bareilly, Tezpur, Jodhpur, Chennai and Sirsa, and
-Pune again) and the milestones. With it off, a local build still shows it
+holds the places (Pune, then Bareilly, Tezpur, Jodhpur and Chennai, and Pune
+again; cities only, no years) and the milestones. With it off, a local build still shows it
 with `PUBLIC_JOURNEY_PREVIEW=1`.
 
 ### Game mode and the casino

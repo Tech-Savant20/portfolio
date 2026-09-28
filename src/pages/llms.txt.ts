@@ -78,11 +78,11 @@ export const GET: APIRoute = () => {
   );
 
   if (journeyReady) {
-    const years = (p: (typeof places)[number]) => p.label ?? (p.to ? `${p.from}–${p.to}` : `${p.from}–now`);
+    const note = (p: (typeof places)[number]) => (p.born ? " (born)" : p.label === "Now" ? " (now)" : "");
     push(
       "## Journey",
       "",
-      `Places lived: ${places.map((p) => `${p.city} (${years(p)})`).join(", ")}.`,
+      `Places lived, in order: ${places.map((p) => `${p.city}${note(p)}`).join(", ")}.`,
       "",
       ...milestones.map((m) => `- ${m.date}: ${m.title}. ${m.detail}`),
       "",

@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Geist";
+        src: url("assets/fonts/geist-latin-wght-normal.woff2") format("woff2");
+        font-weight: 100 900;
+      }
+      @font-face {
+        font-family: "Geist Mono";
+        src: url("assets/fonts/geist-mono-latin-wght-normal.woff2") format("woff2");
+        font-weight: 100 900;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0d0d0e;
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #0d0d0e;
+        color: #f2f2ef;
+        font-family: "Geist", sans-serif;
+      }
+      .scene {
+        position: absolute;
+        inset: 0;
+      }
+      .mono {
+        font-family: "Geist Mono", monospace;
+      }
+      .glow {
+        position: absolute;
+        width: 1400px;
+        height: 1400px;
+        left: 700px;
+        top: -260px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 90, 31, 0.16) 0%, rgba(255, 90, 31, 0) 62%);
+      }
+
+      /* Intro */
+      #intro-inner {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 120px;
+      }
+      .eyebrow {
+        font-size: 26px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: #ff6b35;
+      }
+      .name-line {
+        overflow: hidden;
+        padding-bottom: 12px;
+      }
+      .name {
+        display: block;
+        font-size: 230px;
+        font-weight: 600;
+        letter-spacing: -0.055em;
+        line-height: 0.95;
+      }
+      .intro-sub {
+        margin-top: 36px;
+        font-size: 40px;
+        color: #a9a9a3;
+        max-width: 1300px;
+        line-height: 1.3;
+      }
+      .intro-sub b {
+        color: #f2f2ef;
+        font-weight: 500;
+      }
+      .roles {
+        display: flex;
+        gap: 18px;
+        margin-top: 56px;
+      }
+      .role {
+        font-size: 30px;
+        padding: 14px 34px;
+        border-radius: 999px;
+        border: 2px solid #3a3a3c;
+        color: #d8d8d2;
+      }
+      .role.on {
+        background: #f2f2ef;
+        color: #0d0d0e;
+        border-color: #f2f2ef;
+      }
+
+      /* Main */
+      #copy {
+        position: absolute;
+        left: 96px;
+        top: 0;
+        width: 450px;
+        height: 1080px;
+      }
+      .chapter {
+        position: absolute;
+        left: 0;
+        top: 300px;
+        width: 450px;
+      }
+      .ch-num {
+        font-size: 24px;
+        letter-spacing: 0.2em;
+        color: #ff6b35;
+        text-transform: uppercase;
+      }
+      .ch-title {
+        margin-top: 22px;
+        font-size: 64px;
+        font-weight: 600;
+        letter-spacing: -0.035em;
+        line-height: 1.02;
+      }
+      .ch-title code {
+        font-size: 56px;
+        color: #ff6b35;
+        background: #1f1f22;
+        padding: 0 16px;
+        border-radius: 12px;
+      }
+      .ch-body {
+        margin-top: 26px;
+        font-size: 29px;
+        line-height: 1.42;
+        color: #a9a9a3;
+      }
+      .ch-body code {
+        font-family: "Geist Mono", monospace;
+        color: #f2f2ef;
+        background: #1f1f22;
+        padding: 2px 10px;
+        border-radius: 6px;
+      }
+      #brand {
+        position: absolute;
+        left: 96px;
+        top: 70px;
+        font-size: 26px;
+        font-weight: 500;
+      }
+      #frame {
+        position: absolute;
+        left: 606px;
+        top: 118px;
+        width: 1240px;
+        height: 819px;
+        border-radius: 18px;
+        overflow: hidden;
+        background: #1a1a1c;
+        border: 1px solid #2c2c2f;
+        box-shadow: 0 50px 120px rgba(0, 0, 0, 0.55);
+      }
+      #bar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1240px;
+        height: 44px;
+        background: #1f1f22;
+        display: flex;
+        align-items: center;
+        padding-left: 20px;
+        gap: 9px;
+      }
+      .dot {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: #3d3d41;
+      }
+      .dot.r {
+        background: #ff5f57;
+      }
+      .dot.y {
+        background: #febc2e;
+      }
+      .dot.g {
+        background: #28c840;
+      }
+      #url-box {
+        position: absolute;
+        left: 370px;
+        top: 8px;
+        width: 500px;
+        height: 28px;
+        border-radius: 8px;
+        background: #141416;
+      }
+      .url {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 500px;
+        height: 28px;
+        line-height: 28px;
+        text-align: center;
+        font-size: 16px;
+        color: #b9b9b3;
+      }
+      #viewport {
+        position: absolute;
+        left: 0;
+        top: 44px;
+        width: 1240px;
+        height: 775px;
+        overflow: hidden;
+        background: #0d0d0e;
+      }
+      .shot {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1240px;
+        height: 775px;
+        object-fit: cover;
+      }
+      #phone {
+        position: absolute;
+        left: 1610px;
+        top: 402px;
+        width: 262px;
+        height: 562px;
+        border-radius: 40px;
+        background: #050506;
+        padding: 9px;
+        box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6);
+      }
+      #phone img {
+        display: block;
+        width: 244px;
+        height: 528px;
+        border-radius: 32px;
+        object-fit: cover;
+        object-position: top;
+      }
+      #progress {
+        position: absolute;
+        left: 606px;
+        top: 986px;
+        width: 1240px;
+        height: 4px;
+        border-radius: 2px;
+        background: #26262a;
+        overflow: hidden;
+      }
+      #progress-fill {
+        width: 1240px;
+        height: 4px;
+        background: #ff5a1f;
+        transform-origin: left center;
+      }
+      #ticks {
+        position: absolute;
+        left: 606px;
+        top: 1004px;
+        width: 1240px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 17px;
+        letter-spacing: 0.14em;
+        color: #8f8f89;
+        text-transform: uppercase;
+      }
+
+      /* Outro */
+      #outro-inner {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      .outro-url {
+        font-size: 140px;
+        font-weight: 600;
+        letter-spacing: -0.05em;
+      }
+      .outro-url span {
+        color: #ff5a1f;
+      }
+      .outro-stack {
+        margin-top: 34px;
+        font-size: 28px;
+        color: #a9a9a3;
+        letter-spacing: 0.04em;
+      }
+      .outro-foot {
+        margin-top: 70px;
+        font-size: 24px;
+        color: #8f8f89;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="38"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Intro -->
+      <div id="intro" class="scene clip" data-start="0" data-duration="4.6" data-track-index="0">
+        <div id="intro-inner">
+          <div class="eyebrow mono" id="intro-eyebrow">abhyudaytomar.com · portfolio</div>
+          <div class="name-line"><span class="name" id="name-1">Abhyuday</span></div>
+          <div class="name-line"><span class="name" id="name-2">Tomar.</span></div>
+          <div class="intro-sub" id="intro-sub">One site, <b>three views</b> of the same work.</div>
+          <div class="roles" id="roles">
+            <div class="role on" id="role-1">Backend</div>
+            <div class="role" id="role-2">Cloud</div>
+            <div class="role" id="role-3">AI/ML</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main tour -->
+      <div id="main" class="scene clip" data-start="4.2" data-duration="29.8" data-track-index="1">
+        <div class="glow" id="glow"></div>
+        <div id="brand">© Code by Abhyuday</div>
+
+        <div id="copy">
+          <div class="chapter" id="ch1">
+            <div class="ch-num mono">01 · Three views</div>
+            <div class="ch-title">One site, three readers.</div>
+            <div class="ch-body">Backend, Cloud and AI/ML views reorder the same projects and skills for whoever is reading.</div>
+          </div>
+          <div class="chapter" id="ch2">
+            <div class="ch-num mono">02 · Work</div>
+            <div class="ch-title">Case studies with real numbers.</div>
+            <div class="ch-body">Architecture, key decisions and results, checked against each project's repo.</div>
+          </div>
+          <div class="chapter" id="ch3">
+            <div class="ch-num mono">03 · My journey</div>
+            <div class="ch-title">From Pune, back to Pune.</div>
+            <div class="ch-body">A three.js Earth turns to India, then an orb travels the map city to city.</div>
+          </div>
+          <div class="chapter" id="ch4">
+            <div class="ch-num mono">04 · Homelab</div>
+            <div class="ch-title">A live homelab, on the page.</div>
+            <div class="ch-body">Three servers on one Tailscale mesh, 20+ containers, and 30 days of uptime in Cloudflare D1.</div>
+          </div>
+          <div class="chapter" id="ch5">
+            <div class="ch-num mono">05 · Credentials</div>
+            <div class="ch-title">Certifications, dealt.</div>
+            <div class="ch-body">A dealer's hands shuffle the deck. Click the watch and it becomes the Omnitrix.</div>
+          </div>
+          <div class="chapter" id="ch6">
+            <div class="ch-num mono">06 · Easter eggs</div>
+            <div class="ch-title">Press <code class="mono">`</code> for a terminal.</div>
+            <div class="ch-body">Game mode, six secrets, and a blackjack table the server deals for aura points.</div>
+          </div>
+        </div>
+
+        <div id="frame">
+          <div id="bar">
+            <div class="dot r"></div>
+            <div class="dot y"></div>
+            <div class="dot g"></div>
+            <div id="url-box" data-layout-allow-overlap>
+              <div class="url mono" id="u1">abhyudaytomar.com</div>
+              <div class="url mono" id="u2">abhyudaytomar.com/cloud</div>
+              <div class="url mono" id="u3">abhyudaytomar.com/ai</div>
+              <div class="url mono" id="u4">abhyudaytomar.com/#work</div>
+              <div class="url mono" id="u5">abhyudaytomar.com/work/lastmile-iq</div>
+              <div class="url mono" id="u6">abhyudaytomar.com/#journey</div>
+              <div class="url mono" id="u7">abhyudaytomar.com/#homelab</div>
+              <div class="url mono" id="u8">abhyudaytomar.com/status</div>
+              <div class="url mono" id="u9">abhyudaytomar.com/#credentials</div>
+              <div class="url mono" id="u10">abhyudaytomar.com</div>
+              <div class="url mono" id="u11">abhyudaytomar.com/casino</div>
+            </div>
+          </div>
+          <div id="viewport" data-layout-allow-overflow>
+            <img class="shot" id="s1" src="assets/shots/hero-light.jpg" alt="" />
+            <img class="shot" id="s2" src="assets/shots/hero-dark-cloud.jpg" alt="" />
+            <img class="shot" id="s3" src="assets/shots/hero-dark-ai.jpg" alt="" />
+            <img class="shot" id="s4" src="assets/shots/work-1.jpg" alt="" />
+            <img class="shot" id="s5" src="assets/shots/case-top.jpg" alt="" />
+            <img class="shot" id="s6" src="assets/shots/journey-3.jpg" alt="" />
+            <img class="shot" id="s7" src="assets/shots/homelab-dark.jpg" alt="" />
+            <img class="shot" id="s8" src="assets/shots/status.jpg" alt="" />
+            <img class="shot" id="s9" src="assets/shots/creds-2.jpg" alt="" />
+            <img class="shot" id="s10" src="assets/shots/terminal.jpg" alt="" />
+            <img class="shot" id="s11" src="assets/shots/game-mode.jpg" alt="" />
+            <img class="shot" id="s12" src="assets/shots/casino.jpg" alt="" />
+          </div>
+        </div>
+
+        <div id="phone"><img src="assets/shots/m-hero.jpg" alt="" /></div>
+
+        <div id="progress"><div id="progress-fill"></div></div>
+        <div id="ticks" class="mono">
+          <span>Views</span><span>Work</span><span>Journey</span><span>Homelab</span><span>Credentials</span><span>Secrets</span>
+        </div>
+      </div>
+
+      <!-- Outro -->
+      <div id="outro" class="scene clip" data-start="33.6" data-duration="4.4" data-track-index="2">
+        <div id="outro-inner">
+          <div class="eyebrow mono" id="outro-eyebrow">See it live</div>
+          <div class="outro-url" id="outro-url">abhyudaytomar<span>.com</span></div>
+          <div class="outro-stack mono" id="outro-stack">Astro · Tailwind CSS · GSAP · Three.js · Cloudflare Workers + D1</div>
+          <div class="outro-foot mono" id="outro-foot">Source on GitHub · Tech-Savant20/portfolio</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const E = "power3.out";
+
+      // ---------- Intro (0 - 4.6)
+      tl.fromTo("#intro-eyebrow", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 0.2);
+      tl.fromTo("#name-1", { yPercent: 110 }, { yPercent: 0, duration: 0.9, ease: "power4.out" }, 0.35);
+      tl.fromTo("#name-2", { yPercent: 110 }, { yPercent: 0, duration: 0.9, ease: "power4.out" }, 0.5);
+      tl.fromTo("#intro-sub", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 1.1);
+      tl.fromTo("#roles", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 1.35);
+      // the role pill hops Backend -> Cloud -> AI/ML
+      const pill = (on, off, t) => {
+        tl.to(on, { backgroundColor: "#f2f2ef", color: "#0d0d0e", borderColor: "#f2f2ef", duration: 0.25 }, t);
+        tl.to(off, { backgroundColor: "rgba(0,0,0,0)", color: "#d8d8d2", borderColor: "#3a3a3c", duration: 0.25 }, t);
+      };
+      pill("#role-2", "#role-1", 2.3);
+      pill("#role-3", "#role-2", 2.9);
+      pill("#role-1", "#role-3", 3.5);
+      tl.to("#intro-inner", { opacity: 0, y: -40, duration: 0.5, ease: "power2.in" }, 4.05);
+
+      // ---------- Main (4.2 - 34.0), times below are absolute
+      const M = 4.2;
+      tl.fromTo("#glow", { opacity: 0 }, { opacity: 1, duration: 1.2 }, M);
+      tl.fromTo("#brand", { opacity: 0 }, { opacity: 1, duration: 0.6 }, M + 0.2);
+      tl.fromTo("#frame", { opacity: 0, y: 60, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: E }, M);
+      tl.fromTo("#progress, #ticks", { opacity: 0 }, { opacity: 1, duration: 0.6 }, M + 0.4);
+      tl.fromTo("#progress-fill", { scaleX: 0 }, { scaleX: 1, duration: 29.4, ease: "none" }, M);
+
+      // Shots: [id, url id, start, end]
+      const shots = [
+        ["#s1", "#u1", 4.2, 6.4],
+        ["#s2", "#u2", 6.4, 8.4],
+        ["#s3", "#u3", 8.4, 10.4],
+        ["#s4", "#u4", 10.4, 12.6],
+        ["#s5", "#u5", 12.6, 15.0],
+        ["#s6", "#u6", 15.0, 19.2],
+        ["#s7", "#u7", 19.2, 21.8],
+        ["#s8", "#u8", 21.8, 24.4],
+        ["#s9", "#u9", 24.4, 28.6],
+        ["#s10", "#u10", 28.6, 30.4],
+        ["#s11", "#u10", 30.4, 32.0],
+        ["#s12", "#u11", 32.0, 34.0],
+      ];
+      gsap.set(".shot, .url", { opacity: 0 });
+      shots.forEach(([s, u, a, b], i) => {
+        const first = i === 0;
+        tl.fromTo(
+          s,
+          { opacity: first ? 1 : 0, xPercent: first ? 0 : 3 },
+          { opacity: 1, xPercent: 0, duration: first ? 0.01 : 0.55, ease: E },
+          a,
+        );
+        tl.fromTo(s, { scale: 1.0 }, { scale: 1.045, duration: b - a + 0.6, ease: "none" }, a);
+        tl.to(u, { opacity: 1, duration: 0.25 }, a);
+        const next = shots[i + 1];
+        if (next) {
+          tl.to(s, { opacity: 0, duration: 0.45, ease: "power1.in" }, b + 0.1);
+          if (next[1] !== u) tl.to(u, { opacity: 0, duration: 0.2 }, b);
+        }
+      });
+
+      // Chapters: [id, start, end]
+      const chapters = [
+        ["#ch1", 4.4, 10.4],
+        ["#ch2", 10.4, 15.0],
+        ["#ch3", 15.0, 19.2],
+        ["#ch4", 19.2, 24.4],
+        ["#ch5", 24.4, 28.6],
+        ["#ch6", 28.6, 34.0],
+      ];
+      gsap.set(".chapter", { opacity: 0 });
+      chapters.forEach(([c, a, b], i) => {
+        const parts = [c + " .ch-num", c + " .ch-title", c + " .ch-body"];
+        tl.set(c, { opacity: 1 }, a);
+        parts.forEach((p, j) => {
+          tl.fromTo(p, { opacity: 0, y: 34 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, a + 0.12 + j * 0.1);
+        });
+        if (i < chapters.length - 1) {
+          tl.to(parts, { opacity: 0, y: -24, duration: 0.3, ease: "power2.in", stagger: 0.04 }, b - 0.35);
+        }
+      });
+
+      // Phone slides in with game mode
+      tl.fromTo("#phone", { opacity: 0, y: 120 }, { opacity: 1, y: 0, duration: 0.8, ease: E }, 30.5);
+
+      // Main exits
+      tl.to("#frame, #phone, #copy, #brand, #progress, #ticks, #glow", { opacity: 0, duration: 0.5, ease: "power2.in" }, 33.4);
+
+      // ---------- Outro (33.6 - 38)
+      tl.fromTo("#outro-eyebrow", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 33.9);
+      tl.fromTo("#outro-url", { opacity: 0, y: 50, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.9, ease: E }, 34.05);
+      tl.fromTo("#outro-stack", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 34.6);
+      tl.fromTo("#outro-foot", { opacity: 0 }, { opacity: 1, duration: 0.7 }, 35.1);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

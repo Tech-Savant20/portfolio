@@ -1,12 +1,50 @@
 # abhyudaytomar.com
 
 My portfolio. One site with three views (backend, cloud and AI/ML) that reorder
-the same work for whoever is reading, four case studies, and a live 3D map of my
-homelab.
+the same work for whoever is reading, four case studies, a live 3D map of my
+homelab, and a few things to find if you poke around.
 
-**Stack:** Astro 7, Tailwind CSS 4, GSAP, Three.js, TypeScript. Hosted on
-Cloudflare Workers (static assets plus a small Worker for the API), with
-D1, Turnstile and Email Service.
+**[Live site](https://abhyudaytomar.com)** · [Status](https://abhyudaytomar.com/status) ·
+[llms.txt](https://abhyudaytomar.com/llms.txt)
+
+https://github.com/user-attachments/assets/daeb84d7-9ba0-4763-892d-c666a606b0ee
+
+<sub>A 38-second tour of the site. If the player doesn't load, [download the MP4](docs/tour.mp4).</sub>
+
+## What's on it
+
+- **Three views of one site.** `/`, `/cloud` and `/ai` reorder the projects,
+  skills and hero line for backend, cloud or ML readers, without a page load.
+- **Case studies** for LastMile IQ, the Jarvis homelab, DocPilot and a diabetic
+  retinopathy model: architecture, decisions and results, with numbers checked
+  against each project's repo.
+- **My journey:** a three.js Earth turns to India, then an orb travels the map
+  from city to city.
+- **A live homelab.** Three servers on one Tailscale mesh push their Uptime Kuma
+  results to the site; `/status` shows 30 days of uptime from Cloudflare D1.
+- **Certifications as a deck of cards**, shuffled by a dealer's hands.
+- **Easter eggs:** a terminal (press <kbd>`</kbd>), X-ray mode, the Konami code,
+  game mode, and a blackjack table the server deals for aura points.
+
+## Stack
+
+Astro 7, Tailwind CSS 4, GSAP, Three.js and TypeScript. Hosted on Cloudflare
+Workers (static assets plus a small Worker for the API), with D1, Turnstile and
+Email Service. Contact messages are archived in Supabase.
+
+## Running it locally
+
+Needs Node 22.12 or newer.
+
+```sh
+npm install
+npm run dev       # site only, at http://localhost:4321
+npm run preview   # build and run the real Worker, API included, at http://127.0.0.1:8787
+```
+
+Local secrets live in `.dev.vars` (git-ignored). It uses Cloudflare's Turnstile
+test keys, so the contact form works locally and `wrangler dev` only simulates
+sending email.
 
 ## Layout
 
@@ -15,12 +53,14 @@ src/
   data/          all site content: roles, projects, case studies, homelab, skills
   components/    Astro components (hero, project stack, homelab, charts, diagrams)
   scripts/       client code: role switching, scroll effects, 3D scene, contact form
-  lib/           shared logic (the LastMile rate engine for its playground)
-  pages/         /, /cloud, /ai, /work/[slug], /status, /casino, 404
-worker/          API: /api/status and /api/uptime (homelab), /api/contact, /api/casino
-worker/migrations/  D1 schema for the uptime history
+  lib/           shared logic (blackjack rules, the LastMile rate engine)
+  pages/         /, /cloud, /ai, /work/[slug], /status, /casino, 404, llms.txt
+worker/          API: /api/status, /api/uptime, /api/contact, /api/casino, /api/visits
+worker/migrations/  D1 schema
 homelab/         cron script that pushes live status from Uptime Kuma (Jarvis and vault-server)
 scripts/         build and maintenance scripts (see below)
+video/           the tour video above, as a HyperFrames composition
+docs/            the rendered tour video
 ```
 
 Most edits happen in `src/data/`. Every project, number and sentence on the
@@ -35,18 +75,14 @@ site comes from there.
 | `npm run build` | Static build into `dist/`, then write `dist/_headers` (CSP with script hashes) |
 | `npm run deploy` | Build and deploy to Cloudflare |
 | `npm run check` | Type-check the site and the Worker |
+| `npm test` | Blackjack rules tests |
 | `npm run photo` | Rebuild the tritone portrait from `photo-src/portrait-cutout.png` |
 | `npm run hero` | Rebuild the hero cut-out and its backdrop colours from `photo-src/` |
 | `node scripts/make-earth.mjs` | Rebuild the journey globe's NASA imagery (downloads ~170 MB once, to a cache outside the project) |
 | `node scripts/make-geo.mjs` | Rebuild the journey's India map and boundary data |
-| `npm test` | Blackjack rules tests |
 | `node scripts/make-images.mjs` | Re-render the Open Graph cards (the role cards from the hero photo) and touch icon |
 | `node scripts/smoke-api.mjs <url> <token>` | Smoke-test the API and pages |
 | `node scripts/qa-screens.mjs <url> <dir>` | Screenshots in light, dark, motion and phone modes |
-
-Local secrets live in `.dev.vars` (git-ignored). It uses Cloudflare's Turnstile
-test keys, so the contact form works locally and `wrangler dev` only simulates
-sending email.
 
 ## Deploying
 
@@ -67,7 +103,11 @@ sending email.
    (and `--local` for `npm run preview`).
 7. `npm run deploy`. The custom domains are set up on the first deploy.
 
-## Live status and the status page
+---
+
+## How it works
+
+### Live status and the status page
 
 Jarvis and vault-server each run Uptime Kuma and push their results to
 `POST /api/status` every two minutes (`homelab/README.md` has the setup). The
@@ -84,7 +124,7 @@ rather than downtime.
 minutes; `/api/status` for 30 seconds. About 45,000 D1 rows are written a day,
 inside the free plan's 100,000; rows older than 400 days are dropped.
 
-## The opening
+### The opening
 
 - **Preloader** (`Preloader.astro`, `src/scripts/preloader.ts`): "hello" in a run of
   languages (नमस्ते, Hello, வணக்கம், ਸਤ ਸ੍ਰੀ ਅਕਾਲ, নমস্কার, કેમ છો, Hola, こんにちは), then
@@ -112,7 +152,7 @@ inside the free plan's 100,000; rows older than 400 days are dropped.
   mode, socials), with a round theme switch beside it. Esc closes it, focus
   stays inside while it's open.
 
-## My journey
+### My journey
 
 `Journey.astro`, `src/scripts/journey.ts`, `src/scripts/journey-globe.ts`,
 data in `src/data/journey.ts`. On wide screens it pins and scrolls sideways: a
@@ -127,30 +167,27 @@ when the section is near on desktop). `node scripts/make-geo.mjs` writes
 `public/journey/geo.json`: land dots from Natural Earth (public domain), and
 India drawn to its official boundary as shown by the Survey of India (all of
 Jammu & Kashmir and Ladakh, and Arunachal Pradesh), with its 36 states and
-union territories. India's outline is DataMeet's
-[india-composite](https://github.com/datameet/maps/tree/master/Country) (CC0);
-the states are DataMeet's
-[States/Admin2](https://github.com/datameet/maps/tree/master/States)
-(CC BY 4.0, credited under the map).
+union territories.
 
 The section is on while `journeyReady` is true in `src/data/journey.ts`, which
 holds the places (Pune, then Bareilly, Tezpur, Jodhpur, Chennai and Sirsa, and
 Pune again) and the milestones. With it off, a local build still shows it
 with `PUBLIC_JOURNEY_PREVIEW=1`.
 
-## Game mode and the casino
+### Game mode and the casino
 
 The joystick in the nav (or `play` in the terminal) turns on game mode
 (`src/scripts/game-mode.ts`): a "Player 1, press start" splash with a coin
 sound, a violet arcade reskin with faint scanlines, and a HUD at the bottom
 with your aura this week, the six secrets as quests (click for a hint to the
 next one) and the way into `/casino`, blackjack for aura points. On the home
-page the sunglasses light up with rupee signs. Everyone starts each weekly season (Monday, India time) on 1,000
-aura; the top ten are on the board and last week's leader is crowned.
+page the sunglasses light up with rupee signs.
 
-Your bet sits on the felt as a stack of chips: they fly in from the chip
-buttons, the dealer pays winnings out beside them or sweeps them away, and
-the same bet goes back down for the next hand.
+Everyone starts each weekly season (Monday, India time) on 1,000 aura; the top
+ten are on the board and last week's leader is crowned. Your bet sits on the
+felt as a stack of chips: they fly in from the chip buttons, the dealer pays
+winnings out beside them or sweeps them away, and the same bet goes back down
+for the next hand.
 
 The Worker deals and scores every hand (`worker/casino.ts`, rules in
 `src/lib/blackjack.ts`, tests with `npm test`): per-player shoes shuffled with
@@ -160,61 +197,7 @@ Turnstile on joining, same-origin checks and a rate limit on every write.
 Tables are in `worker/migrations/0003_casino.sql`. Aura is just for fun:
 nothing to buy, nothing to win. Hitting a blackjack is the sixth secret.
 
-## Trail and llms.txt
-
-On desktop, a dotted trail (`ScrollPath.astro`, `src/scripts/scroll-path.ts`)
-runs down the home page's side margin and swings to the other margin in the
-empty band between sections, so it never crosses a card; it's built from the
-page's own layout. It fills in with the accent as you scroll and an orb
-rides its tip, a little below the middle of the screen.
-
-`/llms.txt` (`src/pages/llms.txt.ts`) is a plain-text summary of the site for
-AI tools, generated at build time from `src/data/`, so it never drifts from
-the pages.
-
-## Easter eggs
-
-- A terminal opens with the backtick key, or a long press on the logo on phones
-  (`src/scripts/terminal.ts`). `help` lists the commands; `ping jarvis` asks the
-  real `/api/status`; `visits` shows the visit count on a split-flap board.
-  Visits are counted once per browser session by `POST /api/visits`
-  (`worker/visits.ts`, `worker/migrations/0004_visits.sql`): only a daily
-  total is stored, posts must come from the site itself and are rate limited.
-- `xray` in the terminal outlines each component and shows the page's real
-  weight from resource timing (`src/scripts/xray.ts`).
-- The Konami code (or `herotime` in the terminal, for phones) starts hype mode
-  (`src/scripts/hype.ts`, loaded only then): a big Omnitrix dial spins through
-  the aliens and slams down with a flash and a shockwave, then for 20 seconds
-  the site is in alien mode (green tint, scanlines, glowing and glitching
-  headings, the alien's hologram in the corner, pointer sparks, a countdown).
-  The last three seconds go red and beep, like the watch timing out in the
-  show. Esc or "Power down" ends it early; reduced motion keeps only the
-  colours and the countdown. Sounds are synthesised and follow the deck's
-  sound switch.
-- The footer counts the six secrets found, with a segment lighting up for each (`src/scripts/secrets.ts`, kept in
-  `localStorage`): the terminal, X-ray, Konami, the Omnitrix, three hand
-  shuffles in a row, and a blackjack in the casino.
-- Case-study diagrams send a sample request along their edges, and the LastMile
-  IQ case study has a working copy of its rate engine
-  (`src/lib/rate-engine.ts`, checked against the project's own tests).
-
-## Contact messages in Supabase
-
-Every submission that gets past Turnstile is written to a `contact_messages`
-table before the email goes out, so nothing is lost if mail delivery fails. The
-table is created by `supabase/migrations/20260923000000_contact_messages.sql`.
-
-Row level security is on and the table grants no policies, so the publishable
-(anon) key can neither read nor write it. The Worker uses a secret key, which is
-a Worker secret and never reaches the browser. Name, email, message, country and
-user agent are stored; the IP address is not. Supabase's advisor flags "RLS
-enabled, no policy" on this table; that is the intended deny-all setup.
-
-The project is `portfolio` (ref `tuboqyqbnyzewyrifhzp`, Mumbai). `.mcp.json`
-points Claude Code at the Supabase MCP server for it, so migrations and queries
-can be run from a session (`/mcp` to authenticate).
-
-## Certifications deck
+### Certifications deck
 
 The certifications are a deck of cards (`src/scripts/deck.ts`), handled by a
 dealer's hands (`DealerHands.astro`, `src/scripts/hands.ts`). When the section
@@ -233,12 +216,89 @@ Click it and it becomes the Omnitrix; the dial flickers through the other aliens
 before locking in and projecting a hologram of the next one:
 XLR8, Four Arms, Diamondhead, Swampfire and Ghostfreak. The holograms are traced
 from reference art into three tones and load from `public/holo/aliens.json` only
-when the deck comes near the screen. The Omnitrix and the aliens are Ben 10 fan
-art (Cartoon Network); the reference images stay out of the repo, in the
-git-ignored `photo-src/aliens/`. The power-up sound is synthesised in the browser.
+when the deck comes near the screen. The reference images stay out of the repo,
+in the git-ignored `photo-src/aliens/`. The power-up sound is synthesised in the
+browser.
 
-The shuffle sounds in `public/sounds/` are cut from Kenney's
-[Casino Audio](https://kenney.nl/assets/casino-audio) pack (CC0).
+### Easter eggs
+
+- A terminal opens with the backtick key, or a long press on the logo on phones
+  (`src/scripts/terminal.ts`). `help` lists the commands; `ping jarvis` asks the
+  real `/api/status`; `visits` shows the visit count on a split-flap board.
+  Visits are counted once per browser session by `POST /api/visits`
+  (`worker/visits.ts`, `worker/migrations/0004_visits.sql`): only a daily
+  total is stored, posts must come from the site itself and are rate limited.
+- `xray` in the terminal outlines each component and shows the page's real
+  weight from resource timing (`src/scripts/xray.ts`).
+- The Konami code (or `herotime` in the terminal, for phones) starts hype mode
+  (`src/scripts/hype.ts`, loaded only then): a big Omnitrix dial spins through
+  the aliens and slams down with a flash and a shockwave, then for 20 seconds
+  the site is in alien mode (green tint, scanlines, glowing and glitching
+  headings, the alien's hologram in the corner, pointer sparks, a countdown).
+  The last three seconds go red and beep, like the watch timing out in the
+  show. Esc or "Power down" ends it early; reduced motion keeps only the
+  colours and the countdown. Sounds are synthesised and follow the deck's
+  sound switch.
+- The footer counts the six secrets found, with a segment lighting up for each
+  (`src/scripts/secrets.ts`, kept in `localStorage`): the terminal, X-ray,
+  Konami, the Omnitrix, three hand shuffles in a row, and a blackjack in the
+  casino.
+- Case-study diagrams send a sample request along their edges, and the LastMile
+  IQ case study has a working copy of its rate engine
+  (`src/lib/rate-engine.ts`, checked against the project's own tests).
+
+### Trail and llms.txt
+
+On desktop, a dotted trail (`ScrollPath.astro`, `src/scripts/scroll-path.ts`)
+runs down the home page's side margin and swings to the other margin in the
+empty band between sections, so it never crosses a card; it's built from the
+page's own layout. It fills in with the accent as you scroll and an orb
+rides its tip, a little below the middle of the screen.
+
+`/llms.txt` (`src/pages/llms.txt.ts`) is a plain-text summary of the site for
+AI tools, generated at build time from `src/data/`, so it never drifts from
+the pages.
+
+### Contact messages in Supabase
+
+Every submission that gets past Turnstile is written to a `contact_messages`
+table before the email goes out, so nothing is lost if mail delivery fails. The
+table is created by `supabase/migrations/20260923000000_contact_messages.sql`.
+
+Row level security is on and the table grants no policies, so the publishable
+(anon) key can neither read nor write it. The Worker uses a secret key, which is
+a Worker secret and never reaches the browser. Name, email, message, country and
+user agent are stored; the IP address is not. Supabase's advisor flags "RLS
+enabled, no policy" on this table; that is the intended deny-all setup.
+
+The project is `portfolio` (ref `tuboqyqbnyzewyrifhzp`, Mumbai). `.mcp.json`
+points Claude Code at the Supabase MCP server for it, so migrations and queries
+can be run from a session (`/mcp` to authenticate).
+
+### The tour video
+
+`video/index.html` is a [HyperFrames](https://hyperframes.heygen.com)
+composition (HTML and GSAP, rendered to MP4) built from screenshots of the live
+site. To remake it after the site changes:
+
+```sh
+node video/capture.mjs     # screenshots of abhyudaytomar.com, plus the fonts, into video/assets/
+cd video
+npm run check              # lint, layout and contrast checks
+npm run render             # writes video/renders/tour.mp4 (needs FFmpeg)
+```
+
+Then shrink it into `docs/`:
+
+```sh
+ffmpeg -i renders/tour.mp4 -c:v libx264 -preset slow -crf 24 -pix_fmt yuv420p -movflags +faststart -an ../docs/tour.mp4
+```
+
+The player at the top of this README is a copy uploaded to GitHub, because
+GitHub only plays videos inline from its own `user-attachments` links. After a
+new render, drag `docs/tour.mp4` into any issue or comment box on GitHub, then
+put the link it gives you in place of the old one (you don't need to post the
+comment).
 
 ## Notes
 
@@ -247,3 +307,15 @@ The shuffle sounds in `public/sounds/` are cut from Kenney's
   the visitor chooses one.
 - Case-study numbers are checked against the project repos. Team results
   (DocPilot) are labelled as team results.
+
+## Credits
+
+- Earth imagery: NASA's Blue Marble Next Generation (public domain).
+- Land dots: Natural Earth (public domain). India's outline is DataMeet's
+  [india-composite](https://github.com/datameet/maps/tree/master/Country) (CC0);
+  the states are DataMeet's
+  [States/Admin2](https://github.com/datameet/maps/tree/master/States)
+  (CC BY 4.0, credited under the map).
+- Shuffle sounds in `public/sounds/` are cut from Kenney's
+  [Casino Audio](https://kenney.nl/assets/casino-audio) pack (CC0).
+- The Omnitrix and the aliens are Ben 10 fan art (Cartoon Network).

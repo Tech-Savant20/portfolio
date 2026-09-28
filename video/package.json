@@ -1,0 +1,11 @@
+{
+  "name": "portfolio-tour-video",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "node capture.mjs",
+    "preview": "npx --yes hyperframes@0.8.82 preview",
+    "check": "npx --yes hyperframes@0.8.82 check",
+    "render": "npx --yes hyperframes@0.8.82 render --quality delivery --fps 30 --output renders/tour.mp4"
+  }
+}

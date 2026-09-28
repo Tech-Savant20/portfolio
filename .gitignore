@@ -24,6 +24,11 @@ resume.pdf
 WhatsApp Image*
 photo-src/
 
+# tour video: screenshots, fonts and renders are regenerated
+video/assets/
+video/snapshots/
+video/renders/
+
 # local Claude Code settings
 .claude/settings.local.json
 

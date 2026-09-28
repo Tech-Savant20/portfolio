@@ -16,8 +16,8 @@ src/
   components/    Astro components (hero, project stack, homelab, charts, diagrams)
   scripts/       client code: role switching, scroll effects, 3D scene, contact form
   lib/           shared logic (the LastMile rate engine for its playground)
-  pages/         /, /cloud, /ai, /work/[slug], /status, 404
-worker/          API: /api/status and /api/uptime (homelab), /api/contact
+  pages/         /, /cloud, /ai, /work/[slug], /status, /casino, 404
+worker/          API: /api/status and /api/uptime (homelab), /api/contact, /api/casino
 worker/migrations/  D1 schema for the uptime history
 homelab/         cron script that pushes live status from Uptime Kuma (Jarvis and vault-server)
 scripts/         build and maintenance scripts (see below)
@@ -36,7 +36,9 @@ site comes from there.
 | `npm run deploy` | Build and deploy to Cloudflare |
 | `npm run check` | Type-check the site and the Worker |
 | `npm run photo` | Rebuild the tritone portrait from `photo-src/portrait-cutout.png` |
-| `node scripts/make-images.mjs` | Re-render the Open Graph cards and touch icon |
+| `npm run hero` | Rebuild the hero photo and its backdrop colours from `photo-src/hero-source.png` |
+| `npm test` | Blackjack rules tests |
+| `node scripts/make-images.mjs` | Re-render the Open Graph cards (the role cards from the hero photo) and touch icon |
 | `node scripts/smoke-api.mjs <url> <token>` | Smoke-test the API and pages |
 | `node scripts/qa-screens.mjs <url> <dir>` | Screenshots in light, dark, motion and phone modes |
 
@@ -80,6 +82,67 @@ rather than downtime.
 minutes; `/api/status` for 30 seconds. About 45,000 D1 rows are written a day,
 inside the free plan's 100,000; rows older than 400 days are dropped.
 
+## The opening
+
+- **Preloader** (`Preloader.astro`, `src/scripts/preloader.ts`): "hello" in a run of
+  languages (नमस्ते, Hello, வணக்கம், ਸਤ ਸ੍ਰੀ ਅਕਾਲ, নমস্কার, કેમ છો, Hola, こんにちは), then
+  the screen lifts off with a curved edge. Once per browser session, home pages
+  only; an inline script decides before first paint, so there's no flash, and
+  it never shows without JS or with reduced motion.
+- **Hero** (`Hero.astro`, `src/scripts/hero.ts`): the studio photo on its own
+  backdrop colour (the same in both themes), the name as a giant marquee that
+  reverses with the scroll direction and speeds up with scroll velocity, a
+  "Located in" pill, and the role line. The photo comes from
+  `photo-src/hero-source.png` (git-ignored): `npm run hero` writes
+  `src/assets/hero.jpg` and samples the backdrop colours into
+  `src/data/hero.json`.
+- **Menu** (`MenuPanel.astro`, `src/scripts/menu.ts`): over the hero the bar
+  takes the hero's ink; past it, the bar slides away and a round menu button
+  opens a dark panel with a curved edge (sections, role views, theme, game
+  mode, socials). Esc closes it, focus stays inside while it's open.
+
+## My journey
+
+`Journey.astro`, `src/scripts/journey.ts`, `src/scripts/journey-globe.ts`,
+data in `src/data/journey.ts`. On wide screens it pins and scrolls sideways: a
+three.js dot globe turns to India, a dot map of the subcontinent follows with an
+orb travelling city to city, then the milestones on a wave the orb rides.
+Phones and reduced motion get it stacked. `node scripts/make-geo.mjs` writes
+`public/journey/geo.json`: land dots from Natural Earth (public domain), and
+India drawn to its official boundary as shown by the Survey of India (all of
+Jammu & Kashmir and Ladakh, and Arunachal Pradesh), with its 36 states and
+union territories. India's outline is DataMeet's
+[india-composite](https://github.com/datameet/maps/tree/master/Country) (CC0);
+the states are DataMeet's
+[States/Admin2](https://github.com/datameet/maps/tree/master/States)
+(CC BY 4.0, credited under the map).
+
+The section is on while `journeyReady` is true in `src/data/journey.ts`, which
+holds the places (Pune, then Bareilly, Tezpur, Jodhpur, Chennai and Sirsa, and
+Pune again) and the milestones. With it off, a local build still shows it
+with `PUBLIC_JOURNEY_PREVIEW=1`.
+
+## Game mode and the casino
+
+The joystick in the nav (or `play` in the terminal) turns on game mode
+(`src/scripts/game-mode.ts`): a "Player 1, press start" splash with a coin
+sound, a violet arcade reskin with faint scanlines, and a HUD at the bottom
+with your aura this week, the six secrets as quests (click for a hint to the
+next one) and the way into `/casino`, blackjack for aura points. Everyone starts each weekly season (Monday, India time) on 1,000
+aura; the top ten are on the board and last week's leader is crowned.
+
+Your bet sits on the felt as a stack of chips: they fly in from the chip
+buttons, the dealer pays winnings out beside them or sweeps them away, and
+the same bet goes back down for the next hand.
+
+The Worker deals and scores every hand (`worker/casino.ts`, rules in
+`src/lib/blackjack.ts`, tests with `npm test`): per-player shoes shuffled with
+crypto randomness, the dealer's hole card kept on the server until the hand
+ends, session cookies (HttpOnly, SameSite=Strict, only a hash stored),
+Turnstile on joining, same-origin checks and a rate limit on every write.
+Tables are in `worker/migrations/0003_casino.sql`. Aura is just for fun:
+nothing to buy, nothing to win. Hitting a blackjack is the sixth secret.
+
 ## Trail and llms.txt
 
 On desktop, a dotted trail (`ScrollPath.astro`, `src/scripts/scroll-path.ts`)
@@ -108,9 +171,9 @@ the pages.
   show. Esc or "Power down" ends it early; reduced motion keeps only the
   colours and the countdown. Sounds are synthesised and follow the deck's
   sound switch.
-- The footer counts the five secrets found (`src/scripts/secrets.ts`, kept in
-  `localStorage`): the terminal, X-ray, Konami, the Omnitrix, and three hand
-  shuffles in a row.
+- The footer counts the six secrets found (`src/scripts/secrets.ts`, kept in
+  `localStorage`): the terminal, X-ray, Konami, the Omnitrix, three hand
+  shuffles in a row, and a blackjack in the casino.
 - Case-study diagrams send a sample request along their edges, and the LastMile
   IQ case study has a working copy of its rate engine
   (`src/lib/rate-engine.ts`, checked against the project's own tests).

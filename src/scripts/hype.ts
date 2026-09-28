@@ -49,7 +49,7 @@ const CSS = `
 :root.hype-warn .hype-scan{background-image:repeating-linear-gradient(0deg,rgb(255 59 48 / .1) 0 1px,transparent 1px 4px)}
 @keyframes hype-scan{to{background-position:0 4px}}
 @keyframes hype-pulse{50%{opacity:.55}}
-:root.hype :is(h1,h2,.big,.section-title){text-shadow:0 0 22px rgb(67 242 75 / .55),0 0 2px rgb(67 242 75 / .8)}
+:root.hype :is(h1,h2,.big,.section-title,[data-hero-track] .run){text-shadow:0 0 22px rgb(67 242 75 / .55),0 0 2px rgb(67 242 75 / .8)}
 :root.hype-warn :is(h1,h2,.big,.section-title){text-shadow:0 0 22px rgb(255 59 48 / .55)}
 .hype-glitch{animation:hype-glitch .42s steps(2) both}
 @keyframes hype-glitch{

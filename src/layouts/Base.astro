@@ -5,6 +5,7 @@ import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal
 import "../styles/global.css";
 import { site } from "../data/site";
 import Terminal from "../components/Terminal.astro";
+import Icon from "../components/Icon.astro";
 
 interface Props {
   title: string;
@@ -17,7 +18,7 @@ interface Props {
   noindex?: boolean;
 }
 
-const { title, description, path, image = "/og/backend.png", jsonLd, noindex = false } = Astro.props;
+const { title, description, path, image = "/og/backend.jpg", jsonLd, noindex = false } = Astro.props;
 const canonical = new URL(path, site.url).href;
 const ogImage = new URL(image, site.url).href;
 const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
@@ -59,6 +60,7 @@ const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
         try {
           const saved = localStorage.getItem("theme");
           if (saved === "light" || saved === "dark") root.dataset.theme = saved;
+          if (localStorage.getItem("game-mode") === "on") root.classList.add("game-mode");
         } catch {}
       })();
     </script>
@@ -70,6 +72,7 @@ const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
     <slot name="head" />
   </head>
   <body>
+    <slot name="overlay" />
     <a href="#main" class="skip-link">Skip to content</a>
     <slot name="nav" />
     <main id="main" tabindex="-1">
@@ -77,6 +80,30 @@ const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
     </main>
     <slot name="footer" />
     <Terminal />
+    {/* Game mode's HUD: your aura, the secrets as quests, and the way in to
+        the casino. Hidden unless game mode is on (game-mode.ts fills it). */}
+    {
+      path !== "/casino" && (
+        <div class="game-hud" data-game-hud role="region" aria-label="Game mode">
+          <span class="hud-player" aria-hidden="true">P1</span>
+          <a class="hud-stat" href="/casino" data-hud-aura title="Your aura this week">
+            <span class="hud-glyph" aria-hidden="true">◆</span>
+            <span data-hud-aura-value>1,000</span>
+            <span class="hud-unit">aura</span>
+          </a>
+          <button class="hud-stat" type="button" data-hud-quest title="Next quest">
+            <span class="hud-glyph" aria-hidden="true">★</span>
+            <span data-hud-secrets>0 / 6</span>
+            <span class="hud-unit">quests</span>
+          </button>
+          <a class="hud-play" href="/casino">
+            <Icon name="cards" size="1.05rem" />
+            Play blackjack
+            <Icon name="arrow-right" size="0.95rem" />
+          </a>
+        </div>
+      )
+    }
 
     {
       beaconToken && (
@@ -113,5 +140,124 @@ const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
 
   main:focus {
     outline: none;
+  }
+
+  .game-hud {
+    position: fixed;
+    left: 50%;
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    z-index: calc(var(--z-nav) - 1);
+    display: none;
+    align-items: center;
+    gap: 0.25rem;
+    max-width: calc(100% - 1.5rem);
+    padding: 0.3125rem;
+    border-radius: 999px;
+    background: #16121f;
+    color: #efe9ff;
+    border: 1px solid rgb(168 85 247 / 0.45);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    box-shadow:
+      0 0 0 4px rgb(168 85 247 / 0.12),
+      0 14px 34px -12px rgb(88 28 135 / 0.7);
+    transform: translateX(-50%);
+  }
+
+  :global(html.game-mode) .game-hud {
+    display: inline-flex;
+    animation: hud-in 0.6s var(--ease-out) both;
+  }
+
+  @keyframes hud-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 1.5rem);
+    }
+  }
+
+  .hud-player {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    background: #a855f7;
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    animation: hud-blink 1.6s steps(1) infinite;
+  }
+
+  @keyframes hud-blink {
+    50% {
+      background: #7e22ce;
+    }
+  }
+
+  .hud-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 2.25rem;
+    padding-inline: 0.75rem;
+    border-radius: 999px;
+    color: inherit;
+    background: none;
+    border: 0;
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease;
+  }
+
+  .hud-stat:hover,
+  .hud-stat:focus-visible {
+    background: rgb(168 85 247 / 0.2);
+  }
+
+  .hud-glyph {
+    color: #c084fc;
+  }
+
+  .hud-unit {
+    color: #a99bc4;
+  }
+
+  .hud-play {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding-inline: 1rem;
+    border-radius: 999px;
+    background: #a855f7;
+    color: #fff;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .hud-play:hover {
+    background: #9333ea;
+  }
+
+  @media (max-width: 560px) {
+    .hud-unit,
+    .hud-player {
+      display: none;
+    }
+
+    .hud-stat {
+      padding-inline: 0.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hud-player {
+      animation: none;
+    }
   }
 </style>

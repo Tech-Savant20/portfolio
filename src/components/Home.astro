@@ -2,6 +2,7 @@
 import Base from "../layouts/Base.astro";
 import Nav from "./Nav.astro";
 import Hero from "./Hero.astro";
+import Preloader from "./Preloader.astro";
 import ScrollPath from "./ScrollPath.astro";
 import Marquee from "./Marquee.astro";
 import WorkStack from "./WorkStack.astro";
@@ -11,6 +12,8 @@ import Skills from "./Skills.astro";
 import Credentials from "./Credentials.astro";
 import Contact from "./Contact.astro";
 import Footer from "./Footer.astro";
+import Journey from "./Journey.astro";
+import { journeyReady } from "../data/journey";
 import { roleList, roles, site, type RoleKey } from "../data/site";
 import { resumeHref, resumeHrefs } from "../lib/resume";
 
@@ -20,6 +23,9 @@ interface Props {
 
 const { role } = Astro.props;
 const r = roles[role];
+// The journey is on when its data is ready (src/data/journey.ts); a local
+// preview build can show it anyway with PUBLIC_JOURNEY_PREVIEW=1.
+const showJourney = journeyReady || import.meta.env.PUBLIC_JOURNEY_PREVIEW === "1";
 const resume = resumeHref(role);
 const resumes = resumeHrefs();
 
@@ -38,7 +44,7 @@ const views = Object.fromEntries(
       skillOrder: v.skillOrder,
       homelabFirst: v.homelabFirst,
       resume: resumes[v.key],
-      og: `/og/${v.key}.png`,
+      og: `/og/${v.key}.jpg`,
     },
   ]),
 );
@@ -56,11 +62,12 @@ const person = {
 };
 ---
 
-<Base title={r.title} description={r.description} path={r.path} image={`/og/${role}.png`} jsonLd={person}>
-  <Nav slot="nav" mode="home" role={role} />
+<Base title={r.title} description={r.description} path={r.path} image={`/og/${role}.jpg`} jsonLd={person}>
+  <Preloader slot="overlay" />
+  <Nav slot="nav" mode="home" role={role} journey={showJourney} />
 
   <ScrollPath />
-  <Hero role={role} resume={resume} />
+  <Hero role={role} resume={resume} journey={showJourney} />
   <Marquee />
   {r.homelabFirst && <HomelabSection />}
   <WorkStack role={role} />
@@ -68,6 +75,7 @@ const person = {
   {!r.homelabFirst && <HomelabSection />}
   <Skills role={role} />
   <Credentials />
+  {showJourney && <Journey />}
   <Contact />
 
   <Footer slot="footer" />
@@ -76,7 +84,7 @@ const person = {
 
 <script>
   import { initReveal } from "../scripts/reveal";
-  import { initHeroPointer } from "../scripts/hero";
+  import { initHeroMarquee } from "../scripts/hero";
   import { initStack } from "../scripts/stack";
   import { initRoleSwitch } from "../scripts/roles";
   import { initDeck } from "../scripts/deck";
@@ -101,7 +109,7 @@ const person = {
     // Split headings first: they take over from the generic fade-up reveal.
     initSplitReveals,
     initReveal,
-    initHeroPointer,
+    initHeroMarquee,
     initHeroScroll,
     initMarquee,
     initCountUps,

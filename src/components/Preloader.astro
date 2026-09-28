@@ -1,0 +1,96 @@
+---
+/**
+ * The first thing on a visit: "hello" in a run of languages, then the screen
+ * lifts away with a curved edge. Once per browser session, home pages only.
+ * The inline script below decides before the first paint, so there's never a
+ * flash of the page first; without JS, or with reduced motion, it never shows.
+ */
+const words = [
+  { text: "नमस्ते", lang: "hi" },
+  { text: "Hello", lang: "en" },
+  { text: "வணக்கம்", lang: "ta" },
+  { text: "ਸਤ ਸ੍ਰੀ ਅਕਾਲ", lang: "pa" },
+  { text: "নমস্কার", lang: "bn" },
+  { text: "કેમ છો", lang: "gu" },
+  { text: "Hola", lang: "es" },
+  { text: "こんにちは", lang: "ja" },
+];
+---
+
+<div class="preloader" data-preloader aria-hidden="true">
+  <p class="word">
+    <span class="dot"></span>
+    <span data-preloader-word lang={words[0].lang}>{words[0].text}</span>
+  </p>
+  <svg class="curve" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <path data-preloader-curve d="M0 0 L100 0 Q50 100 0 0 Z"></path>
+  </svg>
+  <script is:inline type="application/json" data-preloader-words set:html={JSON.stringify(words)} />
+</div>
+
+<!-- Before first paint: show the greeting only on a first visit this session. -->
+<script is:inline>
+  (() => {
+    try {
+      if (sessionStorage.getItem("greeted")) return;
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    } catch {
+      return;
+    }
+    const root = document.documentElement;
+    root.classList.add("preloading");
+    // Never trap the page behind it, even if the script below never runs.
+    setTimeout(() => root.classList.remove("preloading"), 4000);
+  })();
+</script>
+
+<script>
+  import { runPreloader } from "../scripts/preloader";
+  runPreloader();
+</script>
+
+<style>
+  .preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    place-items: center;
+    background: #141517;
+    color: #f2f2ef;
+  }
+
+  :global(html.preloading) .preloader {
+    display: grid;
+  }
+
+  :global(html.preloading) {
+    overflow: hidden;
+  }
+
+  .word {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: clamp(2.25rem, 5vw, 4rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  .dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: var(--accent);
+  }
+
+  /* Hangs below the screen; flattens as the screen lifts. */
+  .curve {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 14vh;
+    fill: #141517;
+  }
+</style>

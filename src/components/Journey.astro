@@ -1,0 +1,689 @@
+---
+import { milestones, places } from "../data/journey";
+import Icon from "./Icon.astro";
+
+/**
+ * "My journey". On desktop it pins and scrolls sideways: a globe turns to
+ * India, a dot map of the subcontinent follows with an orb travelling city to
+ * city, and then the milestones since, strung on a line the orb keeps riding.
+ * Phones and reduced motion get the same content stacked vertically.
+ * Choreography in src/scripts/journey.ts; the globe in journey-globe.ts.
+ */
+
+// The close-up map's grid (must match scripts/make-geo.mjs).
+const REGION = { west: 66, east: 99, south: 5.5, north: 37.5, step: 0.45 };
+const cols = Math.round((REGION.east - REGION.west) / REGION.step);
+const rows = Math.round((REGION.north - REGION.south) / REGION.step);
+const project = (lon: number, lat: number) => ({
+  x: (lon - REGION.west) / REGION.step,
+  y: (REGION.north - lat) / REGION.step,
+});
+const pins = places.map((p) => ({ ...p, ...project(p.lon, p.lat) }));
+const { x: focusX, y: focusY } = project(79, 22);
+
+// A smooth route through the pins (Catmull-Rom as cubic Béziers).
+const route = (() => {
+  const P = pins;
+  let d = `M${P[0].x.toFixed(2)} ${P[0].y.toFixed(2)}`;
+  for (let i = 0; i < P.length - 1; i++) {
+    const p0 = P[Math.max(0, i - 1)];
+    const p1 = P[i];
+    const p2 = P[i + 1];
+    const p3 = P[Math.min(P.length - 1, i + 2)];
+    const c1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 };
+    const c2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 };
+    d += ` C${c1.x.toFixed(2)} ${c1.y.toFixed(2)} ${c2.x.toFixed(2)} ${c2.y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return d;
+})();
+
+const born = places.find((p) => p.born) ?? places[0];
+const years = (p: (typeof places)[number]) => p.label ?? (p.to ? `${p.from}–${p.to}` : `${p.from}–now`);
+// Back where it started? Then the story is a round trip.
+const home = places[places.length - 1].city === born.city;
+const between = [...new Set(places.map((p) => p.city))].filter((c) => c !== born.city);
+const cityList = between.length > 1 ? `${between.slice(0, -1).join(", ")} and ${between.at(-1)}` : between.join("");
+const kindLabel = { life: "Life", study: "Study", build: "Built", cert: "Certified", role: "Role" } as const;
+---
+
+<section
+  id="journey"
+  class="journey"
+  aria-labelledby="journey-title"
+  data-section="journey"
+  data-journey
+  data-places={JSON.stringify(places.map((p) => ({ lon: p.lon, lat: p.lat })))}
+>
+  <div class="pin" data-journey-pin>
+    <div class="track" data-journey-track>
+      {/* 1. Intro and the globe */}
+      <div class="panel intro" data-journey-intro>
+        <div class="copy">
+          <p class="eyebrow">My journey</p>
+          <h2 id="journey-title" class="title">{home ? `From ${born.city}, back to ${born.city}.` : `From ${born.city} to here.`}</h2>
+          <p class="lede">
+            Born in {born.city}, I grew up across {between.length} cities as my father was posted around the country:
+            {cityList}.{home && ` Now I'm back in ${born.city}.`}
+          </p>
+          <p class="hint" aria-hidden="true">
+            Scroll
+            <Icon name="arrow-right" size="1rem" />
+          </p>
+        </div>
+        <div class="globe" data-journey-globe aria-hidden="true"></div>
+      </div>
+
+      {/* 2. The places, on a dot map of the subcontinent */}
+      <div class="panel places">
+        <div class="map" style={`aspect-ratio:${cols} / ${rows}`}>
+          <svg viewBox={`0 0 ${cols} ${rows}`} aria-hidden="true" data-journey-map>
+            {/* India's dots are solid, inside its official boundary and its
+                states; the neighbours' land fades with distance. */}
+            <defs>
+              <radialGradient id="journey-land-fade" gradientUnits="userSpaceOnUse" cx={focusX} cy={focusY} r={cols * 0.62}>
+                <stop offset="0.38" stop-color="#fff" />
+                <stop offset="0.92" stop-color="#000" />
+              </radialGradient>
+              <mask id="journey-land-mask">
+                <rect width={cols} height={rows} fill="url(#journey-land-fade)" />
+              </mask>
+            </defs>
+            <path class="land" data-journey-land d="" mask="url(#journey-land-mask)"></path>
+            <path class="land-india" data-journey-india d=""></path>
+            <path class="states" data-journey-states d=""></path>
+            <path class="border" data-journey-border d=""></path>
+            <path class="route" d={route}></path>
+            <path class="route-lit" d={route} data-journey-route></path>
+            {/* Last place drawn first, so a city visited twice shows its first, lit pin. */}
+            {pins.map((p, i) => <circle class="pin-dot" cx={p.x} cy={p.y} r="0.9" data-pin={i} />).reverse()}
+            <g class="orb" data-journey-orb>
+              <circle class="halo" r="2.4"></circle>
+              <circle class="core" r="1.1"></circle>
+            </g>
+          </svg>
+          {/* The label of the city the orb has reached. */}
+          <div class="labels" aria-hidden="true">
+            {
+              pins.map((p, i) => (
+                <span
+                  class="label"
+                  data-label={i}
+                  style={`--x:${((p.x / cols) * 100).toFixed(2)}%;--y:${((p.y / rows) * 100).toFixed(2)}%`}
+                >
+                  <span class="city">{p.city}</span>
+                  <span class="years">{p.born ? `Born ${p.from}` : years(p)}</span>
+                </span>
+              ))
+            }
+          </div>
+          <p class="map-note">
+            Boundaries as shown by the Survey of India. Map data:
+            <a href="https://github.com/datameet/maps" target="_blank" rel="noopener">DataMeet</a>, Natural Earth.
+          </p>
+        </div>
+        {/* Every place, in order; it fills in as the orb travels. */}
+        <ol class="log" aria-label="Places I have lived">
+          {
+            places.map((p, i) => (
+              <li data-log={i}>
+                <span class="log-years">{years(p)}</span>
+                <span class="log-city">
+                  {p.city}
+                  <span class="log-state">{p.state}</span>
+                </span>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+
+      {/* 3. Milestones, strung on a line */}
+      <div class="panel steps" data-journey-steps>
+        <svg class="line" aria-hidden="true" data-journey-line-svg>
+          <path class="line-base" data-journey-line-base d=""></path>
+          <path class="line-lit" data-journey-line d=""></path>
+          <g data-journey-nodes></g>
+        </svg>
+        <ol class="cards">
+          {
+            milestones.map((m, i) => (
+              <li class="card" class:list={[`k-${m.kind}`, { low: i % 2 === 1 }]} data-journey-card>
+                <p class="meta">
+                  <span class="date">{m.date}</span>
+                  <span class="kind">{kindLabel[m.kind]}</span>
+                </p>
+                <h3>{m.title}</h3>
+                <p class="detail">{m.detail}</p>
+                {m.href && (
+                  <a class="more" href={m.href}>
+                    Case study
+                    <Icon name="arrow-right" size="0.9rem" />
+                  </a>
+                )}
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </div>
+
+    {/* Rides the milestone line, at the middle of the screen. */}
+    <span class="step-orb" aria-hidden="true" data-journey-step-orb></span>
+  </div>
+</section>
+
+<script>
+  import { initJourney } from "../scripts/journey";
+  initJourney();
+</script>
+
+<style>
+  .journey {
+    position: relative;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+  }
+
+  .pin {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .track {
+    display: flex;
+    width: max-content;
+    will-change: transform;
+  }
+
+  .panel {
+    position: relative;
+    flex: none;
+    height: 100svh;
+    min-height: 40rem;
+  }
+
+  /* 1 */
+  .intro {
+    width: 100vw;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    padding-inline: var(--gutter);
+  }
+
+  .copy {
+    display: grid;
+    gap: 1.25rem;
+    align-content: center;
+    max-width: 34rem;
+  }
+
+  .eyebrow {
+    color: var(--accent-ink);
+  }
+
+  .title {
+    font-size: clamp(2.75rem, 6vw, 5.5rem);
+    line-height: 0.95;
+    letter-spacing: -0.05em;
+  }
+
+  .lede {
+    font-size: clamp(1.0625rem, 1.4vw, 1.3125rem);
+    color: var(--fg-muted);
+    max-width: 30rem;
+  }
+
+  .hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--fg-subtle);
+  }
+
+  /* Bigger than its column and faded at the edges, so the zoomed-in globe
+     never shows a hard square edge. */
+  .globe {
+    position: relative;
+    height: min(118svh, 72vw);
+    aspect-ratio: 1;
+    justify-self: center;
+    margin-block: -9svh;
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 48%, transparent 70%);
+    mask-image: radial-gradient(circle at 50% 50%, #000 48%, transparent 70%);
+  }
+
+  .globe :global(canvas) {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* 2 */
+  .places {
+    width: 100vw;
+    display: grid;
+    grid-template-columns: auto minmax(14rem, 20rem);
+    justify-content: center;
+    align-items: center;
+    gap: clamp(2rem, 5vw, 5rem);
+    padding: calc(var(--nav-h) + 1rem) var(--gutter) 2rem;
+  }
+
+  .map {
+    position: relative;
+    height: min(76svh, 60rem);
+    max-width: 62vw;
+  }
+
+  .log {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .log li {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: 1rem;
+    padding-block: 0.625rem;
+    border-bottom: 1px solid var(--line);
+    transition:
+      opacity 0.4s ease,
+      transform 0.5s var(--ease-out);
+  }
+
+  .log-years {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    color: var(--fg-muted);
+  }
+
+  .log-city {
+    display: grid;
+    font-weight: 600;
+  }
+
+  .log-state {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--fg-muted);
+  }
+
+  /* While scrolling sideways, the list builds up as the orb reaches each city. */
+  :global(html.journey-h) .log li:not(:global(.is-lit)) {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+
+  :global(html.journey-h) .label {
+    opacity: 0;
+    transform: translate(0.9rem, -30%);
+  }
+
+  :global(html.journey-h) .label:global(.is-current) {
+    opacity: 1;
+    transform: translate(0.9rem, -50%);
+  }
+
+  .map svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .land,
+  .land-india {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 0.42;
+    stroke-linecap: round;
+  }
+
+  .land-india {
+    stroke: color-mix(in oklab, var(--fg) 34%, transparent);
+  }
+
+  /* Opacity on the whole path, so shared state lines don't draw darker. */
+  .states {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 0.1;
+    stroke-linejoin: round;
+    opacity: 0.28;
+  }
+
+  .border {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 0.2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    opacity: 0.75;
+  }
+
+  .route {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 0.22;
+    stroke-dasharray: 0.5 0.9;
+  }
+
+  .route-lit {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 0.35;
+    stroke-linecap: round;
+  }
+
+  .pin-dot {
+    fill: var(--bg);
+    stroke: var(--line-strong);
+    stroke-width: 0.3;
+    transition:
+      fill 0.3s ease,
+      stroke 0.3s ease;
+  }
+
+  .pin-dot:global(.is-lit) {
+    fill: var(--accent);
+    stroke: var(--accent);
+  }
+
+  .orb .halo {
+    fill: var(--accent);
+    opacity: 0.18;
+  }
+
+  .orb .core {
+    fill: var(--accent);
+  }
+
+  .labels {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    pointer-events: none;
+  }
+
+  .label {
+    position: absolute;
+    left: var(--x);
+    top: var(--y);
+    display: grid;
+    gap: 0.1rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 8px;
+    background: color-mix(in oklab, var(--bg) 88%, transparent);
+    border: 1px solid var(--line);
+    transform: translate(0.9rem, -50%);
+    white-space: nowrap;
+    transition:
+      opacity 0.35s ease,
+      transform 0.45s var(--ease-out),
+      border-color 0.3s ease;
+  }
+
+  .label:global(.is-lit) {
+    border-color: var(--accent);
+  }
+
+  .city {
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+
+  .years {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--fg-muted);
+  }
+
+  .map-note {
+    position: absolute;
+    left: 0;
+    bottom: -1.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--fg-subtle);
+  }
+
+  .map-note a {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* 3 */
+  /* Room at the end so the last card's node can reach the orb at mid-screen. */
+  .steps {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 54vw 0 10vw;
+  }
+
+  .line {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .line-base {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 1.5;
+    stroke-dasharray: 1 7;
+    stroke-linecap: round;
+  }
+
+  .line-lit {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .cards {
+    position: relative;
+    display: flex;
+    gap: clamp(2.5rem, 5vw, 5rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Cards alternate above and below the line; the node sits on it. */
+  .card {
+    position: relative;
+    flex: none;
+    width: clamp(16rem, 24vw, 22rem);
+    display: grid;
+    gap: 0.5rem;
+    align-content: start;
+    padding: 1.25rem 1.375rem;
+    border-radius: 1rem;
+    border: 1px solid var(--card-edge);
+    background: var(--card);
+    transform: translateY(-58%);
+    opacity: 0.55;
+    transition:
+      opacity 0.4s ease,
+      border-color 0.4s ease,
+      box-shadow 0.4s ease;
+  }
+
+  .card.low {
+    transform: translateY(58%);
+  }
+
+  .card:global(.is-lit) {
+    opacity: 1;
+    border-color: var(--accent);
+    box-shadow: var(--shadow);
+  }
+
+  .line :global(.node) {
+    fill: var(--bg);
+    stroke: var(--line-strong);
+    stroke-width: 1.5;
+    transition:
+      fill 0.3s ease,
+      stroke 0.3s ease;
+  }
+
+  .line :global(.node.is-lit) {
+    fill: var(--accent);
+    stroke: var(--accent);
+  }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+  }
+
+  .kind {
+    color: var(--accent-ink);
+  }
+
+  .k-life .kind {
+    color: var(--fg);
+  }
+
+  .card h3 {
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+  }
+
+  .detail {
+    font-size: 0.875rem;
+    color: var(--fg-muted);
+  }
+
+  .more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 550;
+    color: var(--accent-ink);
+  }
+
+  .step-orb {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 0.8rem;
+    height: 0.8rem;
+    margin: -0.4rem 0 0 -0.4rem;
+    border-radius: 999px;
+    background: var(--accent);
+    box-shadow:
+      0 0 0 6px color-mix(in oklab, var(--accent) 22%, transparent),
+      0 0 18px var(--accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ---- no horizontal scroll: phones, tablets and reduced motion ---- */
+  :global(html:not(.journey-h)) .track {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  :global(html:not(.journey-h)) .panel {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+
+  :global(html:not(.journey-h)) .intro {
+    grid-template-columns: minmax(0, 1fr);
+    padding: clamp(5rem, 11vw, 9rem) var(--gutter) 2rem;
+  }
+
+  :global(html:not(.journey-h)) .globe,
+  :global(html:not(.journey-h)) .hint,
+  :global(html:not(.journey-h)) .line,
+  :global(html:not(.journey-h)) .step-orb {
+    display: none;
+  }
+
+  :global(html:not(.journey-h)) .places {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    padding: 1rem var(--gutter) 3rem;
+  }
+
+  :global(html:not(.journey-h)) .map {
+    height: auto;
+    width: min(100%, 36rem);
+    max-width: none;
+  }
+
+  /* Stacked, the full list sits under the map instead of labels on it. */
+  :global(html:not(.journey-h)) .labels {
+    display: none;
+  }
+
+  :global(html:not(.journey-h)) .log {
+    width: min(100%, 36rem);
+  }
+
+  :global(html:not(.journey-h)) .pin-dot {
+    fill: var(--accent);
+    stroke: var(--accent);
+  }
+
+  :global(html:not(.journey-h)) .orb {
+    display: none;
+  }
+
+  :global(html:not(.journey-h)) .steps {
+    display: block;
+    padding: 1rem var(--gutter) clamp(4rem, 9vw, 7rem);
+  }
+
+  :global(html:not(.journey-h)) .cards {
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 40rem;
+    margin-inline: auto;
+    border-left: 2px solid var(--line-strong);
+    padding-left: 1.25rem;
+  }
+
+  :global(html:not(.journey-h)) .card,
+  :global(html:not(.journey-h)) .card.low {
+    width: auto;
+    transform: none;
+    opacity: 1;
+  }
+
+  @media (max-width: 480px) {
+    .label {
+      padding: 0.2rem 0.4rem;
+    }
+
+    .city {
+      font-size: 0.75rem;
+    }
+
+    .years {
+      font-size: 0.5625rem;
+    }
+  }
+</style>

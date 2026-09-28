@@ -1,8 +1,8 @@
 // Renders the Open Graph cards (public/og/*.png) and the Apple touch icon
-// from HTML templates, using the site's own fonts and portrait.
+// from HTML templates, using the site's own fonts and hero photo.
 // Usage: node scripts/make-images.mjs
 import puppeteer from "puppeteer-core";
-import { mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -35,11 +35,16 @@ const roleCards = [
   { key: "cloud", title: "Cloud engineer", line: "A three-server homelab with 20+ containers, monitored and backed up." },
   { key: "ai", title: "Applied ML engineer", line: "Models evaluated honestly, and LLM features in real apps." },
 ];
+// The role cards match the hero: the studio photo on its own backdrop colour
+// (src/data/hero.json, from `npm run hero`), dark type beside it.
+const hero = JSON.parse(await readFile("src/data/hero.json", "utf8"));
 for (const r of roleCards) {
   cards.push({
     name: r.key,
+    // JPEG keeps the photo card under WhatsApp's ~300 KB preview limit.
+    type: "jpeg",
     html: base(
-      `<img class="portrait" src="${url("src/assets/portrait.png")}">
+      `<img class="photo" src="${url("src/assets/hero.jpg")}">
        <div class="pad">
          <p class="meta">B.Tech CSE, VIT Bhopal. Graduating 2027</p>
          <h1>Abhyuday<br>Tomar</h1>
@@ -47,10 +52,16 @@ for (const r of roleCards) {
          <p class="line">${r.line}</p>
          <p class="url"><b>abhyudaytomar.com</b></p>
        </div>`,
-      `.portrait { position: absolute; right: -10px; bottom: 0; height: 560px; }
-       h1 { font-size: 118px; line-height: 0.9; letter-spacing: -0.055em; font-weight: 700; margin-top: 28px; }
-       .role { margin-top: 28px; font-size: 40px; font-weight: 600; letter-spacing: -0.03em; color: #ff5a1f; }
-       .line { margin-top: 10px; font-size: 26px; color: #a6a6aa; max-width: 560px; line-height: 1.3; }`,
+      `body { background: ${hero.backdrop.average}; color: ${hero.ink}; }
+       .photo { position: absolute; right: -30px; top: 0; height: 630px; width: 630px; object-fit: cover;
+                -webkit-mask-image: linear-gradient(to right, transparent 0, #000 22%); }
+       .pad { right: 560px; }
+       .meta, .url { color: #55555a; }
+       .url b { color: ${hero.ink}; font-weight: 600; }
+       .url b::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #ff4f12; margin-right: 12px; }
+       h1 { font-size: 112px; line-height: 0.9; letter-spacing: -0.055em; font-weight: 700; margin-top: 28px; }
+       .role { margin-top: 30px; font-size: 40px; font-weight: 600; letter-spacing: -0.03em; color: #d23f0b; }
+       .line { margin-top: 10px; font-size: 25px; color: #4e4e53; line-height: 1.3; }`,
     ),
   });
 }
@@ -95,7 +106,9 @@ for (const card of cards) {
   await writeFile(file, card.html);
   await page.goto(pathToFileURL(file).href, { waitUntil: "load" });
   await page.evaluate(() => document.fonts.ready);
-  await page.screenshot({ path: `public/og/${card.name}.png` });
+  const ext = card.type === "jpeg" ? "jpg" : "png";
+  await page.screenshot({ path: `public/og/${card.name}.${ext}`, ...(card.type === "jpeg" ? { type: "jpeg", quality: 86 } : {}) });
+  await rm(`public/og/${card.name}.${ext === "jpg" ? "png" : "jpg"}`, { force: true });
   console.log("og", card.name);
 }
 

@@ -1,6 +1,6 @@
 /**
  * Hidden things to find on the site. Finding one shows a toast and bumps the
- * "n / 5 secrets found" counter in the footer. Progress is kept per browser.
+ * "n / 6 secrets found" counter in the footer. Progress is kept per browser.
  */
 
 export const SECRETS = {
@@ -9,6 +9,7 @@ export const SECRETS = {
   konami: "Alien mode: the Konami code",
   xray: "X-ray: type xray in the terminal",
   cardshark: "Card shark: shuffle the deck three times",
+  highroller: "High roller: hit a blackjack in the casino",
 } as const;
 
 export type SecretId = keyof typeof SECRETS;
@@ -38,7 +39,8 @@ export function findSecret(id: SecretId) {
     localStorage.setItem(KEY, JSON.stringify(list));
   } catch {}
   showCount();
-  toast(`Secret found: ${SECRETS[id].split(":")[0]} · ${list.length} / ${TOTAL}`);
+  dispatchEvent(new CustomEvent("secretfound", { detail: id }));
+  toast(`Secret found:${SECRETS[id].split(":")[0]} · ${list.length} / ${TOTAL}`);
 }
 
 export function showCount() {

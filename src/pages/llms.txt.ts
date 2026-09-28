@@ -4,6 +4,7 @@ import { projects, caseStudySlugs, smallBuilds } from "../data/projects";
 import { skillGroups, courseworkOnly } from "../data/skills";
 import { certifications, education, leadership } from "../data/credentials";
 import { servers, containerCount } from "../data/homelab";
+import { journeyReady, milestones, places } from "../data/journey";
 
 /**
  * /llms.txt (llmstxt.org): a plain summary of the site for AI tools, built
@@ -75,6 +76,18 @@ export const GET: APIRoute = () => {
     ...certifications.map((c) => `- ${c.name}, ${c.issuer}${c.date ? `, ${c.date}` : ""}`),
     "",
   );
+
+  if (journeyReady) {
+    const years = (p: (typeof places)[number]) => p.label ?? (p.to ? `${p.from}–${p.to}` : `${p.from}–now`);
+    push(
+      "## Journey",
+      "",
+      `Places lived: ${places.map((p) => `${p.city} (${years(p)})`).join(", ")}.`,
+      "",
+      ...milestones.map((m) => `- ${m.date}: ${m.title}. ${m.detail}`),
+      "",
+    );
+  }
 
   return new Response(lines.join("\n"), { headers: { "content-type": "text/plain; charset=utf-8" } });
 };

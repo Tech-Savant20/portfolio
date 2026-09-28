@@ -1,0 +1,12 @@
+{
+  "width": 1254,
+  "height": 1254,
+  "backdrop": {
+    "top": "#d5d5d6",
+    "left": "#dededf",
+    "right": "#e2e2e3",
+    "bottom": "#dadadb",
+    "average": "#dcdcdd"
+  },
+  "ink": "#111112"
+}

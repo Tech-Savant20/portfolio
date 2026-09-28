@@ -6,7 +6,7 @@
 
 const TARGETS: [string, string, string][] = [
   [".nav", "Nav.astro", "fixed · role switcher"],
-  ["[data-hero]", "Hero.astro", "static HTML · scroll + pointer motion"],
+  ["[data-hero]", "Hero.astro", "studio photo · name marquee driven by scroll"],
   ["[data-section='homelab']", "HomelabSection.astro", "Three.js loads when near · live /api/status"],
   ["[data-section='work']", "WorkStack.astro", "static HTML · 3D deck on scroll"],
   ["[data-section='small']", "SmallBuilds.astro", "static HTML · hover marquee"],
@@ -16,6 +16,8 @@ const TARGETS: [string, string, string][] = [
   ["article.cs", "work/[slug].astro", "case study · static HTML"],
   ["[data-playground]", "RatePlayground.astro", "LastMile's rate engine, client-side"],
   ["[data-uptime]", "status.astro", "live /api/status · 30 days from D1 via /api/uptime"],
+  ["[data-journey]", "Journey.astro", "pinned sideways scroll · three.js globe on demand"],
+  ["[data-casino]", "casino.astro", "every card dealt and scored by the Worker · D1"],
   ["[data-footer]", "Footer.astro", "sticky curtain · ASCII canvas"],
 ];
 

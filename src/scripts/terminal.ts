@@ -1,4 +1,5 @@
 import { SECRETS, alienMode, findSecret, foundSecrets, type SecretId } from "./secrets";
+import { setGameMode } from "./game-mode";
 
 /**
  * The drop-down terminal. Press ` anywhere (outside a text field), or
@@ -137,6 +138,7 @@ export function initTerminal() {
         ["shuffle", "shuffle the certifications deck"],
         ["xray", "see how the page is built"],
         ["secrets", "what's hidden on this site"],
+        ["play", "game mode, and blackjack for aura"],
         ["clear · exit", ""],
       ].forEach(([c, d]) => line(`<span class="ok">${esc(c.padEnd(18))}</span>${d ? `<span class="dim">${esc(d)}</span>` : ""}`));
     },
@@ -254,6 +256,14 @@ export function initTerminal() {
     omnitrix() {
       line("It's on the dealer's wrist, down in Credentials. Try clicking it.", "dim");
       line("Or, with a keyboard: ↑ ↑ ↓ ↓ ← → ← → B A.", "dim");
+    },
+    play() {
+      line("Game mode on. Taking you to the table…", "ok");
+      setGameMode(true, false);
+      setTimeout(() => (location.href = "/casino"), 500);
+    },
+    casino() {
+      commands.play([]);
     },
     // Not in help: the way into hype mode for phones, which have no arrow keys.
     herotime() {

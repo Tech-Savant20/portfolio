@@ -43,6 +43,12 @@
 
   .orb-layer {
     z-index: 4;
+    transition: opacity 0.3s ease;
+  }
+
+  /* The journey has its own orb while it's pinned. */
+  :global(html.journey-pinned) .orb-layer {
+    opacity: 0;
   }
 
   .svg {

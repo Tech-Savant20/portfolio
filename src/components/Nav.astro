@@ -1,6 +1,8 @@
 ---
 import { roles, type RoleKey } from "../data/site";
+import hero from "../data/hero.json";
 import Icon from "./Icon.astro";
+import MenuPanel from "./MenuPanel.astro";
 import RoleSwitcher from "./RoleSwitcher.astro";
 import ThemeToggle from "./ThemeToggle.astro";
 
@@ -8,20 +10,27 @@ interface Props {
   /** Home pages show the role switcher; case studies show a way back. */
   mode: "home" | "article";
   role?: RoleKey;
+  /** Whether the home page has the journey section (for the menu). */
+  journey?: boolean;
 }
 
-const { mode, role = "backend" } = Astro.props;
+const { mode, role = "backend", journey = false } = Astro.props;
 const home = roles[role].path;
 const onHome = mode === "home";
 const sectionHref = (id: string) => (onHome ? `#${id}` : `${home}#${id}`);
 ---
 
 <div class="sentinel" data-nav-sentinel aria-hidden="true"></div>
-<header class="nav" data-nav>
+<header class="nav" class:list={{ "has-hero": onHome }} data-nav style={`--hero-ink:${hero.ink}`}>
   <div class="inner container-x">
+    {/* "© Code by Abhyuday"; on hover the © turns and the words roll over to the full name. */}
     <a href={home} class="brand" data-home-link>
-      <span class="mark" aria-hidden="true">AT</span>
-      <span class="name">Abhyuday Tomar</span>
+      <span class="copy" aria-hidden="true">©</span>
+      <span class="roll" aria-hidden="true">
+        <span class="face">Code by Abhyuday</span>
+        <span class="face alt">Abhyuday Tomar</span>
+      </span>
+      <span class="sr-only">Abhyuday Tomar, home</span>
     </a>
 
     <div class="center">
@@ -43,12 +52,19 @@ const sectionHref = (id: string) => (onHome ? `#${id}` : `${home}#${id}`);
         <a href={sectionHref("homelab")} data-section-link>Homelab</a>
         <a href={sectionHref("contact")} data-section-link>Contact</a>
       </nav>
+      <button type="button" class="game" data-game-toggle aria-pressed="false" aria-label="Game mode">
+        <Icon name="game-controller" size="1.2rem" />
+      </button>
       <ThemeToggle />
     </div>
   </div>
 </header>
+{onHome && <MenuPanel onHome={onHome} home={home} role={role} journey={journey} />}
 
 <script>
+  import { initGameMode } from "../scripts/game-mode";
+  initGameMode();
+
   // Solid background once the page has scrolled past the top.
   const nav = document.querySelector<HTMLElement>("[data-nav]");
   const sentinel = document.querySelector("[data-nav-sentinel]");
@@ -123,31 +139,74 @@ const sectionHref = (id: string) => (onHome ? `#${id}` : `${home}#${id}`);
     gap: 1rem;
   }
 
+  /* Home page: over the hero the bar takes the hero's ink, whatever the theme,
+     and has no background; once the hero is gone it slides away (the round
+     menu button takes over). */
+  .nav.has-hero {
+    transition:
+      transform 0.6s var(--ease-out),
+      background-color 0.4s ease,
+      border-color 0.4s ease;
+  }
+
+  .nav:global(.on-hero) {
+    --fg: var(--hero-ink);
+    --fg-muted: color-mix(in oklab, var(--hero-ink) 72%, transparent);
+    --line: color-mix(in oklab, var(--hero-ink) 16%, transparent);
+    --line-strong: color-mix(in oklab, var(--hero-ink) 30%, transparent);
+    --surface: color-mix(in oklab, white 45%, transparent);
+    --bg: #f4f4f2;
+    color: var(--fg);
+    background: transparent !important;
+    border-bottom-color: transparent !important;
+    backdrop-filter: none !important;
+  }
+
+  .nav:global(.is-away) {
+    transform: translateY(-100%);
+  }
+
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.4rem;
     justify-self: start;
-    font-weight: 600;
+    font-size: 0.9375rem;
+    font-weight: 550;
     letter-spacing: -0.01em;
   }
 
-  .mark {
-    display: grid;
-    place-items: center;
-    width: 2.25rem;
-    height: 2.25rem;
-    border-radius: 999px;
-    background: var(--fg);
-    color: var(--bg);
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
+  .copy {
+    display: inline-block;
+    font-size: 1.05em;
+    transition: transform 0.8s var(--ease-out);
   }
 
-  .name {
-    font-size: 0.9375rem;
+  .brand:hover .copy {
+    transform: rotate(360deg);
+  }
+
+  /* Two lines stacked in a one-line window; hover rolls to the second. */
+  .roll {
+    display: inline-grid;
+    height: 1.25em;
+    overflow: hidden;
+    line-height: 1.25;
+  }
+
+  .face {
+    transition: transform 0.6s var(--ease-out);
+  }
+
+  .brand:hover .face {
+    transform: translateY(-100%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .brand:hover .copy,
+    .brand:hover .face {
+      transform: none;
+    }
   }
 
   .center {
@@ -194,6 +253,34 @@ const sectionHref = (id: string) => (onHome ? `#${id}` : `${home}#${id}`);
     transition: color 0.2s ease;
   }
 
+  /* Same shape as the theme toggle next to it; lit up while game mode is on. */
+  .game {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-right: -0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--fg);
+    transition:
+      background-color 0.25s ease,
+      border-color 0.25s ease,
+      color 0.25s ease;
+  }
+
+  .game:hover {
+    background: var(--surface);
+    border-color: var(--line-strong);
+  }
+
+  .game[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+
   .links a:hover {
     color: var(--fg);
   }
@@ -205,14 +292,13 @@ const sectionHref = (id: string) => (onHome ? `#${id}` : `${home}#${id}`);
   }
 
   @media (max-width: 767px) {
-    /* Hidden visually but kept as the link's accessible name. */
-    .name {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
+    /* Phones: just the ©, the role switcher needs the room. */
+    .roll {
+      display: none;
+    }
+
+    .copy {
+      font-size: 1.5rem;
     }
 
     .inner {

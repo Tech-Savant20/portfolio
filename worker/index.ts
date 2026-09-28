@@ -6,7 +6,11 @@
  *   POST /api/status   a homelab server pushes its Uptime Kuma results (bearer token)
  *   GET  /api/uptime   30 days of daily uptime per service, for /status
  *   POST /api/contact  contact form: Turnstile check, archive in Supabase, email to me
+ *   /api/casino/*      blackjack for aura points (worker/casino.ts)
  */
+
+import { casino } from "./casino";
+import { hostnames, json, methodNotAllowed, readBody, safeHost, str, verifyTurnstile } from "./http";
 
 const MAX_STATUS_BYTES = 64 * 1024;
 const MAX_CONTACT_BYTES = 16 * 1024;
@@ -44,6 +48,7 @@ export default {
         if (request.method === "POST") return await contact(request, env);
         return methodNotAllowed("POST");
       }
+      if (url.pathname.startsWith("/api/casino/")) return await casino(request, env, ctx, url);
       if (url.pathname.startsWith("/api/")) return json({ ok: false, error: "not_found" }, 404);
       return env.ASSETS.fetch(request);
     } catch (err) {
@@ -317,7 +322,7 @@ async function contact(request: Request, env: Env): Promise<Response> {
     fields.message = "Messages need 10 to 4,000 characters.";
   if (Object.keys(fields).length) return json({ ok: false, error: "invalid", fields }, 422);
 
-  const verified = await verifyTurnstile(input.token, ip, env, allowedHosts);
+  const verified = await verifyTurnstile(input.token, ip, env, allowedHosts, "contact");
   if (!verified) return json({ ok: false, error: "verification" }, 403);
 
   // Archive first: if the mail hop fails, the message is still on record.
@@ -375,73 +380,7 @@ async function archive(env: Env, input: ContactInput, request: Request): Promise
   }
 }
 
-/** Canonical Turnstile siteverify. Fails closed on any error. */
-async function verifyTurnstile(token: string, ip: string, env: Env, allowedHosts: Set<string>): Promise<boolean> {
-  if (!token || token.length > 2048 || !env.TURNSTILE_SECRET || allowedHosts.size === 0) return false;
-  try {
-    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token, remoteip: ip }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) return false;
-    const result = (await res.json()) as {
-      success?: boolean;
-      action?: string;
-      hostname?: string;
-      metadata?: { result_with_testing_key?: boolean };
-    };
-    // Cloudflare's test keys report no action. Accept them only where
-    // TURNSTILE_ALLOW_TEST_KEYS is set, which is .dev.vars and never production.
-    const testKey = env.TURNSTILE_ALLOW_TEST_KEYS === "true" && result.metadata?.result_with_testing_key === true;
-    return result.success === true && (result.action === "contact" || testKey) && allowedHosts.has(result.hostname ?? "");
-  } catch {
-    return false;
-  }
-}
-
 // --------------------------------------------------------------------------- helpers
-
-function json(data: unknown, status = 200, headers: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "content-type": "application/json; charset=utf-8", "x-content-type-options": "nosniff", ...headers },
-  });
-}
-
-function methodNotAllowed(allow: string): Response {
-  return json({ ok: false, error: "method_not_allowed" }, 405, { allow });
-}
-
-function str(v: unknown): string {
-  return typeof v === "string" ? v : "";
-}
-
-function hostnames(env: Env): Set<string> {
-  return new Set(
-    (env.TURNSTILE_HOSTNAMES ?? "")
-      .split(",")
-      .map((h: string) => h.trim().toLowerCase())
-      .filter(Boolean),
-  );
-}
-
-function safeHost(origin: string): string {
-  try {
-    return new URL(origin).hostname.toLowerCase();
-  } catch {
-    return "";
-  }
-}
-
-/** Reads the body as text, refusing anything over the limit. */
-async function readBody(request: Request, limit: number): Promise<string | null> {
-  const declared = Number(request.headers.get("content-length") ?? "0");
-  if (declared > limit) return null;
-  const text = await request.text();
-  return new TextEncoder().encode(text).byteLength > limit ? null : text;
-}
 
 async function bearerMatches(request: Request, expected: string): Promise<boolean> {
   const header = request.headers.get("authorization") ?? "";

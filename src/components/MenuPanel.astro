@@ -1,0 +1,327 @@
+---
+import { roleList, site, type RoleKey } from "../data/site";
+import Icon from "./Icon.astro";
+
+interface Props {
+  /** Home pages link to sections in place; other pages link back to the home page. */
+  onHome: boolean;
+  home: string;
+  role: RoleKey;
+  /** Extra sections that only exist sometimes (the journey). */
+  journey?: boolean;
+}
+
+const { onHome, home, role, journey = false } = Astro.props;
+const href = (id: string) => (onHome ? `#${id}` : `${home}#${id}`);
+const links = [
+  { label: "Home", href: onHome ? "#main" : home },
+  { label: "Work", href: href("work") },
+  { label: "Homelab", href: href("homelab") },
+  { label: "Skills", href: href("skills") },
+  { label: "Credentials", href: href("credentials") },
+  ...(journey ? [{ label: "Journey", href: href("journey") }] : []),
+  { label: "Contact", href: href("contact") },
+  { label: "Status", href: "/status" },
+];
+---
+
+{/* Floats in at the top right once the hero has scrolled away. */}
+<button
+  type="button"
+  class="menu-btn"
+  data-menu-button
+  data-magnetic
+  aria-expanded="false"
+  aria-controls="site-menu"
+  aria-label="Open menu"
+>
+  <span class="bars" aria-hidden="true"><span></span><span></span></span>
+</button>
+
+<div class="menu" id="site-menu" data-menu hidden>
+  <div class="scrim" data-menu-close aria-hidden="true"></div>
+  <div class="panel" role="dialog" aria-modal="true" aria-label="Menu" data-menu-panel>
+    {/* The curved left edge; it straightens as the panel settles. */}
+    <svg class="curve" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path data-menu-curve d="M100 0 Q-100 50 100 100 Z"></path>
+    </svg>
+
+    <div class="scroll">
+      <nav aria-label="Site" class="row">
+        <p class="label">Navigation</p>
+        <ul class="links">
+          {
+            links.map((l) => (
+              <li>
+                <a href={l.href} data-menu-link>
+                  <span class="dot" aria-hidden="true" />
+                  {l.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="row">
+        <p class="label">View as</p>
+        <div class="roles">
+          {
+            roleList.map((r) => (
+              <a href={r.path} data-menu-role={r.key} aria-current={r.key === role ? "page" : undefined}>
+                {r.label}
+              </a>
+            ))
+          }
+        </div>
+      </div>
+
+      <div class="row">
+        <p class="label">Mode</p>
+        <div class="roles">
+          <button type="button" class="theme" data-menu-theme>
+            <Icon name="circle-half" size="1.1rem" />
+            <span data-menu-theme-label>Switch theme</span>
+          </button>
+          <button type="button" class="theme" data-game-toggle aria-pressed="false">
+            <Icon name="game-controller" size="1.1rem" />
+            <span data-game-label>Game mode off</span>
+          </button>
+          <a class="theme" href="/casino">
+            <Icon name="cards" size="1.1rem" />
+            Casino
+          </a>
+        </div>
+      </div>
+
+      <div class="row socials">
+        <p class="label">Socials</p>
+        <ul>
+          <li><a href={`mailto:${site.email}`}>Email</a></li>
+          <li>
+            <a href={site.linkedin} target="_blank" rel="noopener">
+              LinkedIn<span class="sr-only"> (opens in a new tab)</span>
+            </a>
+          </li>
+          <li>
+            <a href={site.github} target="_blank" rel="noopener">
+              GitHub<span class="sr-only"> (opens in a new tab)</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { initMenu } from "../scripts/menu";
+  initMenu();
+</script>
+
+<style>
+  .menu-btn {
+    position: fixed;
+    z-index: calc(var(--z-nav) + 2);
+    top: calc(var(--nav-h) / 2 - 2rem + 0.5rem);
+    right: var(--gutter);
+    display: grid;
+    place-items: center;
+    width: 4rem;
+    height: 4rem;
+    border: 0;
+    border-radius: 999px;
+    background: #1c1d20;
+    color: #fff;
+    box-shadow: 0 10px 30px -10px rgb(0 0 0 / 0.5);
+    transform: scale(0);
+    transition: transform 0.45s var(--ease-out);
+  }
+
+  .menu-btn:global(.is-shown),
+  :global(html.menu-open) .menu-btn {
+    transform: scale(1);
+  }
+
+  .menu-btn:focus-visible {
+    outline-offset: 4px;
+  }
+
+  .bars {
+    display: grid;
+    gap: 0.4rem;
+    width: 1.5rem;
+  }
+
+  .bars span {
+    height: 1.5px;
+    background: currentColor;
+    transition: transform 0.45s var(--ease-out);
+  }
+
+  :global(html.menu-open) .bars span:first-child {
+    transform: translateY(0.24rem) rotate(45deg);
+  }
+
+  :global(html.menu-open) .bars span:last-child {
+    transform: translateY(-0.24rem) rotate(-45deg);
+  }
+
+  .menu {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-nav) + 1);
+  }
+
+  .scrim {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.35);
+    opacity: 0;
+  }
+
+  /* Always dark, like the button, whatever the theme. */
+  .panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(32rem, 100vw);
+    background: #1c1d20;
+    color: #f2f2ef;
+    transform: translateX(calc(100% + 100px));
+  }
+
+  .curve {
+    position: absolute;
+    top: 0;
+    left: -99px;
+    width: 100px;
+    height: 100%;
+    fill: #1c1d20;
+  }
+
+  .scroll {
+    height: 100%;
+    overflow-y: auto;
+    display: grid;
+    align-content: start;
+    gap: 2.5rem;
+    padding: clamp(6rem, 14vh, 9rem) clamp(2rem, 5vw, 4rem) 3rem;
+  }
+
+  .label {
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgb(255 255 255 / 0.14);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgb(255 255 255 / 0.5);
+  }
+
+  .links {
+    display: grid;
+    gap: 0.125rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .links a {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: clamp(2.25rem, 5.5vh, 3.25rem);
+    font-weight: 500;
+    letter-spacing: -0.035em;
+    line-height: 1.15;
+  }
+
+  .dot {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 999px;
+    background: #fff;
+    transform: scale(0);
+    transition: transform 0.35s var(--ease-out);
+    margin-left: -1.375rem;
+  }
+
+  .links a:hover .dot,
+  .links a:focus-visible .dot,
+  .links a[aria-current="true"] .dot {
+    transform: scale(1);
+  }
+
+  .roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .roles a,
+  .theme {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.5rem;
+    padding-inline: 1rem;
+    border-radius: 999px;
+    border: 1px solid rgb(255 255 255 / 0.22);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      background-color 0.25s ease,
+      color 0.25s ease;
+  }
+
+  .roles a:hover,
+  .theme:hover {
+    background: rgb(255 255 255 / 0.08);
+  }
+
+  .roles a[aria-current="page"],
+  .theme[aria-pressed="true"] {
+    background: #f2f2ef;
+    color: #1c1d20;
+  }
+
+  .socials ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .socials a {
+    font-weight: 500;
+    text-decoration: underline;
+    text-decoration-color: rgb(255 255 255 / 0.3);
+    text-underline-offset: 4px;
+  }
+
+  .socials a:hover {
+    text-decoration-color: currentColor;
+  }
+
+  @media (max-width: 767px) {
+    .menu-btn {
+      width: 3.5rem;
+      height: 3.5rem;
+      top: 0.75rem;
+    }
+
+    .panel {
+      width: 100vw;
+    }
+  }
+</style>

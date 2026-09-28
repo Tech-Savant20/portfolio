@@ -58,8 +58,10 @@ const { project } = Astro.props;
     align-items: center;
     min-height: min(46rem, calc(100dvh - var(--nav-h) - 4rem));
     padding: clamp(1.75rem, 3.5vw, 3.5rem);
-    background: var(--surface);
-    border: 1px solid var(--line);
+    border-radius: clamp(1.25rem, 2.2vw, 2rem);
+    background: var(--card);
+    border: 1px solid var(--card-edge);
+    box-shadow: var(--card-shadow);
     transform-origin: 50% 0;
     overflow: hidden;
   }

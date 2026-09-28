@@ -25,6 +25,16 @@ export function initSmoothScroll() {
   gsap.ticker.lagSmoothing(0);
 }
 
+/** Holds and releases page scrolling, for overlays like the menu. */
+export function pauseScroll() {
+  lenis?.stop();
+  document.documentElement.style.overflow = "hidden";
+}
+export function resumeScroll() {
+  document.documentElement.style.overflow = "";
+  lenis?.start();
+}
+
 /**
  * Runs setup steps one per task, so page start-up is a string of short tasks
  * instead of one long one that blocks input (Total Blocking Time).
@@ -85,7 +95,7 @@ export function initSplitReveals(root: ParentNode = document) {
   });
 }
 
-/** The hero drifts apart as you scroll away from it: name up, portrait slower, copy fades. */
+/** The hero drifts apart as you scroll away from it: the name rises, the photo lags, the copy fades. */
 export function initHeroScroll() {
   if (!motionAllowed()) return;
   const hero = document.querySelector<HTMLElement>("[data-hero]");
@@ -95,9 +105,14 @@ export function initHeroScroll() {
   });
   // Children, not the elements with CSS intro animations: a finished animation
   // with fill-mode "both" would override inline transforms on the parent.
-  tl.to(hero.querySelector(".name"), { yPercent: -35, ease: "none" }, 0)
-    .to(hero.querySelector(".portrait img"), { yPercent: 10, scale: 0.95, ease: "none" }, 0)
-    .to(hero.querySelectorAll(".foot > *"), { y: -60, opacity: 0, ease: "none", stagger: 0.04 }, 0);
+  tl.to(hero.querySelector("[data-hero-track]"), { yPercent: -55, ease: "none" }, 0)
+    .to(hero.querySelector("[data-hero-photo] img"), { yPercent: 12, ease: "none" }, 0)
+    .to(hero.querySelectorAll("[data-hero-where] > *, [data-hero-role] > *"), {
+      y: -70,
+      opacity: 0,
+      ease: "none",
+      stagger: 0.03,
+    }, 0);
 }
 
 /** Numbers count up from zero the first time they are seen. Suffixes and prefixes stay put. */

@@ -338,11 +338,11 @@ match /appointments/{appointmentId} {
     period: "Jul 2025",
     summary:
       "Transfer learning on retinal photos to grade diabetic retinopathy into five stages, with an honest look at where the model fails.",
-    stack: ["Python", "TensorFlow", "Keras", "EfficientNet-B0", "scikit-learn", "OpenCV"],
+    stack: ["Python", "TensorFlow", "Keras", "EfficientNet-B0", "scikit-learn"],
     links: [
       {
         label: "GitHub",
-        href: "https://github.com/Tech-Savant20/Diabetic-Retinopathy-Detection/tree/main/VITBHOPAL_2023",
+        href: "https://github.com/Tech-Savant20/Diabetic-Retinopathy-Detection",
       },
     ],
     metrics: [
@@ -436,7 +436,7 @@ qwk = cohen_kappa_score([rank[y] for y in y_true],
     period: "Sep 2025",
     summary:
       "Upload a receipt photo and get back the merchant, date and line items, sorted into a spending category. Tesseract OCR after grayscale and binarization.",
-    stack: ["Python", "Flask", "SQLAlchemy", "SQLite", "Tesseract OCR", "Bootstrap"],
+    stack: ["Python", "Flask", "SQLite", "Tesseract OCR", "Chart.js", "Bootstrap"],
     links: [{ label: "GitHub", href: "https://github.com/Tech-Savant20/finance_tracker" }],
     metrics: [],
     visual: "finance",
